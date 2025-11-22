@@ -14,8 +14,8 @@ export class Renderer {
     private holdCtx: CanvasRenderingContext2D;
 
     private readonly CELL_SIZE = 30;
-    private readonly GRID_COLOR = '#21262d';
-    private readonly BG_COLOR = '#0d1117';
+    private readonly GRID_COLOR = '#3d4147'; // より明るいグリッド線
+    private readonly BG_COLOR = '#1a1d23'; // 少し明るい背景色
     private readonly GHOST_ALPHA = 0.3;
     private lineClearFlash: number = 0;
     private lastKeyPress: { key: string; time: number } | null = null;
@@ -86,7 +86,7 @@ export class Renderer {
     private drawBoard(game: Game): void {
         const board = game.getBoard().getGrid();
 
-        // グリッド線を描画
+        // グリッド線を描画（より見やすく）
         this.gameCtx.strokeStyle = this.GRID_COLOR;
         this.gameCtx.lineWidth = 1;
 
@@ -103,6 +103,11 @@ export class Renderer {
             this.gameCtx.lineTo(BOARD_WIDTH * this.CELL_SIZE, y * this.CELL_SIZE);
             this.gameCtx.stroke();
         }
+
+        // ボードの境界線を強調
+        this.gameCtx.strokeStyle = '#656d76';
+        this.gameCtx.lineWidth = 2;
+        this.gameCtx.strokeRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
         // 固定されたブロックを描画
         for (let y = 0; y < BOARD_HEIGHT; y++) {
@@ -240,26 +245,28 @@ export class Renderer {
         const color = PIECE_COLORS[pieceType];
         
         if (isGhost) {
-            // ゴーストピースはアウトラインのみ
+            // ゴーストピースはアウトラインのみ（より見やすく）
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
-            ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+            ctx.setLineDash([]);
         } else {
-            // 通常のブロック
+            // 通常のブロック（より見やすく）
             ctx.fillStyle = color;
             ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
             
-            // ハイライト
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            // ハイライト（より明るく）
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.fillRect(x + 1, y + 1, cellSize - 2, (cellSize - 2) / 3);
             
             // シャドウ
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.fillRect(x + 1, y + cellSize - (cellSize - 2) / 3, cellSize - 2, (cellSize - 2) / 3);
             
-            // アウトライン
+            // アウトライン（より太く、明るく）
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
         }
     }

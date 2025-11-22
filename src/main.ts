@@ -95,9 +95,12 @@ class TetrisApp {
      * カウントダウンアニメーション付きでゲーム開始
      */
     private startGameWithCountdown(): void {
+        // カウントダウン中でもゲームを開始してピースを表示
+        this.game.start();
+        
         const countdownElement = document.createElement('div');
         countdownElement.id = 'countdown';
-        countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10000;pointer-events:none;';
+        countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10000;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
         document.body.appendChild(countdownElement);
 
         let count = 3;
@@ -110,7 +113,7 @@ class TetrisApp {
                 countdownElement.textContent = 'GO!';
                 setTimeout(() => {
                     countdownElement.remove();
-                    this.game.start();
+                    // ゲームは既に開始されているので、カウントダウンを削除するだけ
                 }, 500);
             }
         };
