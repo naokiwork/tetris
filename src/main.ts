@@ -94,6 +94,27 @@ class TetrisApp {
             });
         }
 
+        // タスク40: 統計データのリセット機能
+        const resetStatsBtn = document.getElementById('reset-stats-btn');
+        if (resetStatsBtn) {
+            resetStatsBtn.addEventListener('click', () => {
+                if (confirm('統計データをリセットしますか？この操作は取り消せません。')) {
+                    localStorage.removeItem('tetris-stats');
+                    localStorage.removeItem('tetris-rankings');
+                    localStorage.removeItem('tetris-high-score');
+                    alert('統計データをリセットしました。');
+                }
+            });
+        }
+
+        // タスク39: グリッド線の表示/非表示
+        const toggleGridBtn = document.getElementById('toggle-grid-btn');
+        if (toggleGridBtn) {
+            toggleGridBtn.addEventListener('click', () => {
+                this.renderer.toggleGrid();
+            });
+        }
+
         // ハイスコアの読み込みと表示
         this.loadHighScore();
         this.updateHighScoreDisplay();

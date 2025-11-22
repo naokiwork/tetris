@@ -202,6 +202,11 @@ export class Game {
 
         const rotated = rotatePiece(this.currentPiece, this.board, true);
         if (rotated) {
+            // タスク1: ピース回転時の視覚的フィードバック
+            const rotateEvent = new CustomEvent('pieceRotated', {
+                detail: { piece: this.currentPiece }
+            });
+            window.dispatchEvent(rotateEvent);
             this.currentPiece = rotated;
             this.resetLockDelay();
             return true;
@@ -219,6 +224,11 @@ export class Game {
 
         const rotated = rotatePiece(this.currentPiece, this.board, false);
         if (rotated) {
+            // タスク1: ピース回転時の視覚的フィードバック
+            const rotateEvent = new CustomEvent('pieceRotated', {
+                detail: { piece: this.currentPiece }
+            });
+            window.dispatchEvent(rotateEvent);
             this.currentPiece = rotated;
             this.resetLockDelay();
             return true;

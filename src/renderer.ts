@@ -25,6 +25,13 @@ export class Renderer {
     private comboCount: number = 0; // タスク14: コンボ表示
     private comboTime: number = 0; // タスク14: コンボ表示
     private isLineClearing: boolean = false; // タスク68: ライン消去中の操作無効化
+    private rotationFlash: { x: number; y: number; time: number }[] = []; // タスク1: ピース回転時の視覚的フィードバック
+    private hardDropTrail: { x: number; y: number; time: number }[] = []; // タスク2: ハードドロップ時のエフェクト
+    private showGrid: boolean = true; // タスク39: グリッド線の表示/非表示
+    private boardBorderPulse: number = 0; // タスク4: ボードの境界線のアニメーション
+    private scoreAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク12: スコア表示のアニメーション
+    private levelAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク19: レベル表示のアニメーション
+    private linesAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク20: ライン数表示のアニメーション
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -96,6 +103,34 @@ export class Renderer {
             this.comboCount = e.detail.count;
             this.comboTime = Date.now();
         }) as EventListener);
+
+        // タスク1: ピース回転時の視覚的フィードバック
+        window.addEventListener('pieceRotated', ((e: CustomEvent) => {
+            const piece = e.detail.piece;
+            piece.shape.forEach((block: { x: number; y: number }) => {
+                this.rotationFlash.push({
+                    x: piece.position.x + block.x,
+                    y: piece.position.y + block.y,
+                    time: Date.now()
+                });
+            });
+        }) as EventListener);
+
+        // タスク2: ハードドロップ時のエフェクト
+        window.addEventListener('hardDrop', ((e: CustomEvent) => {
+            const piece = e.detail.piece;
+            const distance = e.detail.distance;
+            // 落下軌跡を記録
+            for (let i = 0; i < distance; i++) {
+                piece.shape.forEach((block: { x: number; y: number }) => {
+                    this.hardDropTrail.push({
+                        x: piece.position.x + block.x,
+                        y: piece.position.y + block.y - i,
+                        time: Date.now() - (distance - i) * 10
+                    });
+                });
+            }
+        }) as EventListener);
     }
 
     /**
@@ -112,6 +147,16 @@ export class Renderer {
         this.drawSpeedIndicator(game);
         this.drawKeyPressFeedback();
         this.drawLineClearEffect();
+        this.drawPieceLockAnimation(); // タスク1
+        this.drawLevelUpNotification(); // タスク2
+        this.drawDropIntervalDisplay(game); // タスク4
+        this.drawTetrisEffect(); // タスク13
+        this.drawComboDisplay(); // タスク14
+        this.drawPausedOverlay(game); // タスク3
+        this.drawRotationFlash(); // タスク1
+        this.drawHardDropTrail(); // タスク2
+        this.drawScoreMultiplier(game); // タスク5
+        this.updateBoardBorderAnimation(); // タスク4
     }
 
     /**
@@ -134,26 +179,29 @@ export class Renderer {
     private drawBoard(game: Game): void {
         const board = game.getBoard().getGrid();
 
-        // グリッド線を描画（より見やすく）
-        this.gameCtx.strokeStyle = this.GRID_COLOR;
-        this.gameCtx.lineWidth = 1;
+        // グリッド線を描画（タスク39: 表示/非表示対応）
+        if (this.showGrid) {
+            this.gameCtx.strokeStyle = this.GRID_COLOR;
+            this.gameCtx.lineWidth = 1;
 
-        for (let x = 0; x <= BOARD_WIDTH; x++) {
-            this.gameCtx.beginPath();
-            this.gameCtx.moveTo(x * this.CELL_SIZE, 0);
-            this.gameCtx.lineTo(x * this.CELL_SIZE, BOARD_HEIGHT * this.CELL_SIZE);
-            this.gameCtx.stroke();
+            for (let x = 0; x <= BOARD_WIDTH; x++) {
+                this.gameCtx.beginPath();
+                this.gameCtx.moveTo(x * this.CELL_SIZE, 0);
+                this.gameCtx.lineTo(x * this.CELL_SIZE, BOARD_HEIGHT * this.CELL_SIZE);
+                this.gameCtx.stroke();
+            }
+
+            for (let y = 0; y <= BOARD_HEIGHT; y++) {
+                this.gameCtx.beginPath();
+                this.gameCtx.moveTo(0, y * this.CELL_SIZE);
+                this.gameCtx.lineTo(BOARD_WIDTH * this.CELL_SIZE, y * this.CELL_SIZE);
+                this.gameCtx.stroke();
+            }
         }
 
-        for (let y = 0; y <= BOARD_HEIGHT; y++) {
-            this.gameCtx.beginPath();
-            this.gameCtx.moveTo(0, y * this.CELL_SIZE);
-            this.gameCtx.lineTo(BOARD_WIDTH * this.CELL_SIZE, y * this.CELL_SIZE);
-            this.gameCtx.stroke();
-        }
-
-        // ボードの境界線を強調（より明るく、太く）
-        this.gameCtx.strokeStyle = '#8b949e';
+        // ボードの境界線を強調（タスク4: アニメーション追加）
+        const pulse = Math.sin(this.boardBorderPulse) * 0.3 + 0.7;
+        this.gameCtx.strokeStyle = `rgba(139, 148, 158, ${pulse})`;
         this.gameCtx.lineWidth = 3;
         this.gameCtx.strokeRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
@@ -360,9 +408,16 @@ export class Renderer {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(x + 2, y + 2, cellSize - 4, (cellSize - 4) / 3);
             
-            // シャドウ（控えめに）
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            // シャドウ（タスク3: より強調）
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x + 2, y + cellSize - (cellSize - 4) / 3 - 2, cellSize - 4, (cellSize - 4) / 3);
+            
+            // タスク3: グラデーション効果を追加
+            const gradient = ctx.createLinearGradient(x + 2, y + 2, x + cellSize - 2, y + cellSize - 2);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             
             // アウトライン（より太く、明るく、確実に見えるように）
             ctx.strokeStyle = '#ffffff';
@@ -391,40 +446,123 @@ export class Renderer {
     }
 
     /**
-     * UI更新（スコア、レベル、ライン数）
+     * UI更新（スコア、レベル、ライン数）（タスク12, 19, 20: アニメーション追加）
      */
     private updateUI(game: Game): void {
         const scoreSystem = game.getScoreSystem();
+        const currentScore = scoreSystem.getScore();
+        const currentLevel = scoreSystem.getLevel();
+        const currentLines = scoreSystem.getLines();
         
+        // タスク12: スコア表示のアニメーション
+        if (!this.scoreAnimation || this.scoreAnimation.newValue !== currentScore) {
+            if (this.scoreAnimation) {
+                this.scoreAnimation.newValue = currentScore;
+            } else {
+                this.scoreAnimation = {
+                    oldValue: currentScore,
+                    newValue: currentScore,
+                    time: Date.now()
+                };
+            }
+        }
+
+        // タスク19: レベル表示のアニメーション
+        if (!this.levelAnimation || this.levelAnimation.newValue !== currentLevel) {
+            if (this.levelAnimation) {
+                this.levelAnimation.newValue = currentLevel;
+            } else {
+                this.levelAnimation = {
+                    oldValue: currentLevel,
+                    newValue: currentLevel,
+                    time: Date.now()
+                };
+            }
+        }
+
+        // タスク20: ライン数表示のアニメーション
+        if (!this.linesAnimation || this.linesAnimation.newValue !== currentLines) {
+            if (this.linesAnimation) {
+                this.linesAnimation.newValue = currentLines;
+            } else {
+                this.linesAnimation = {
+                    oldValue: currentLines,
+                    newValue: currentLines,
+                    time: Date.now()
+                };
+            }
+        }
+
         // requestAnimationFrameを使用して確実に更新
         requestAnimationFrame(() => {
             const scoreElement = document.getElementById('score');
-            if (scoreElement) {
+            if (scoreElement && this.scoreAnimation) {
+                const elapsed = Date.now() - this.scoreAnimation.time;
+                const duration = 500;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    const value = Math.floor(this.scoreAnimation.oldValue + (this.scoreAnimation.newValue - this.scoreAnimation.oldValue) * progress);
+                    scoreElement.textContent = String(value).padStart(8, '0');
+                } else {
+                    scoreElement.textContent = scoreSystem.formatScore();
+                    this.scoreAnimation = null;
+                }
+            } else if (scoreElement) {
                 scoreElement.textContent = scoreSystem.formatScore();
             }
 
             const levelElement = document.getElementById('level');
-            if (levelElement) {
+            if (levelElement && this.levelAnimation) {
+                const elapsed = Date.now() - this.levelAnimation.time;
+                const duration = 500;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    const value = Math.floor(this.levelAnimation.oldValue + (this.levelAnimation.newValue - this.levelAnimation.oldValue) * progress);
+                    levelElement.textContent = String(value).padStart(2, '0');
+                } else {
+                    levelElement.textContent = scoreSystem.formatLevel();
+                    this.levelAnimation = null;
+                }
+            } else if (levelElement) {
                 levelElement.textContent = scoreSystem.formatLevel();
             }
 
             const linesElement = document.getElementById('lines');
-            if (linesElement) {
+            if (linesElement && this.linesAnimation) {
+                const elapsed = Date.now() - this.linesAnimation.time;
+                const duration = 500;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    const value = Math.floor(this.linesAnimation.oldValue + (this.linesAnimation.newValue - this.linesAnimation.oldValue) * progress);
+                    linesElement.textContent = String(value).padStart(3, '0');
+                } else {
+                    linesElement.textContent = scoreSystem.formatLines();
+                    this.linesAnimation = null;
+                }
+            } else if (linesElement) {
                 linesElement.textContent = scoreSystem.formatLines();
             }
         });
     }
 
     /**
-     * ゲーム速度インジケーターを描画
+     * ゲーム速度インジケーターを描画（タスク6: 改善）
      */
     private drawSpeedIndicator(game: Game): void {
-        const dropInterval = game.getScoreSystem().getDropInterval();
+        const difficulty = (window as any).tetrisSettings?.difficulty || 'normal';
+        const dropInterval = game.getScoreSystem().getDropInterval(difficulty);
         const level = game.getScoreSystem().getLevel();
         
-        // 速度インジケーターをCanvas上に描画
+        // タスク6: より大きなインジケーター
+        const width = Math.min(100, (1000 - dropInterval) / 10);
+        const height = 8;
         this.gameCtx.fillStyle = level >= 10 ? '#ef4444' : level >= 5 ? '#f97316' : '#22c55e';
-        this.gameCtx.fillRect(5, 5, Math.min(50, (1000 - dropInterval) / 20), 5);
+        this.gameCtx.fillRect(5, 5, width, height);
+        
+        // 境界線
+        this.gameCtx.strokeStyle = '#8b949e';
+        this.gameCtx.lineWidth = 1;
+        this.gameCtx.strokeRect(5, 5, 100, height);
     }
 
     /**
@@ -513,30 +651,39 @@ export class Renderer {
     }
 
     /**
-     * タスク13: テトリスの特別エフェクト
+     * タスク13, 14: テトリスの特別エフェクト（強化）
      */
     private drawTetrisEffect(): void {
         if (this.tetrisFlash > 0) {
-            this.gameCtx.fillStyle = `rgba(0, 240, 255, ${this.tetrisFlash})`;
+            // タスク14: パーティクルエフェクト風の強化
+            const pulse = Math.sin(Date.now() / 50) * 0.3 + 0.7;
+            this.gameCtx.fillStyle = `rgba(0, 240, 255, ${this.tetrisFlash * pulse})`;
             this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
-            this.tetrisFlash = Math.max(0, this.tetrisFlash - 0.05);
+            this.tetrisFlash = Math.max(0, this.tetrisFlash - 0.03);
         }
     }
 
     /**
-     * タスク14: コンボ表示
+     * タスク13, 14: コンボ表示（強化）
      */
     private drawComboDisplay(): void {
         if (this.comboCount > 0 && Date.now() - this.comboTime < 2000) {
             const elapsed = Date.now() - this.comboTime;
             const alpha = elapsed < 500 ? 1 : (elapsed > 1500 ? (2000 - elapsed) / 500 : 1);
+            const scale = elapsed < 500 ? 1 + (elapsed / 500) * 0.3 : 1.3;
             
             this.gameCtx.save();
             this.gameCtx.globalAlpha = alpha;
             this.gameCtx.fillStyle = '#ffeb3b';
-            this.gameCtx.font = 'bold 48px sans-serif';
+            this.gameCtx.font = `bold ${48 * scale}px sans-serif`;
             this.gameCtx.textAlign = 'center';
             this.gameCtx.textBaseline = 'middle';
+            // タスク13: 連続コンボ時の特別なエフェクト
+            if (this.comboCount >= 4) {
+                this.gameCtx.strokeStyle = '#ff0000';
+                this.gameCtx.lineWidth = 3;
+                this.gameCtx.strokeText(`TETRIS! ${this.comboCount} LINES!`, this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
+            }
             this.gameCtx.fillText(`${this.comboCount} LINES!`, this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
             this.gameCtx.restore();
         } else if (this.comboCount > 0) {
@@ -572,6 +719,80 @@ export class Renderer {
      */
     isLineClearingActive(): boolean {
         return this.isLineClearing;
+    }
+
+    /**
+     * タスク1: ピース回転時の視覚的フィードバックを描画
+     */
+    private drawRotationFlash(): void {
+        const now = Date.now();
+        this.rotationFlash = this.rotationFlash.filter(flash => {
+            const elapsed = now - flash.time;
+            if (elapsed > 300) return false;
+
+            const alpha = 1 - (elapsed / 300);
+            const x = flash.x * this.CELL_SIZE;
+            const y = flash.y * this.CELL_SIZE;
+
+            // 光るエフェクト
+            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
+            this.gameCtx.fillRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
+
+            return true;
+        });
+    }
+
+    /**
+     * タスク2: ハードドロップ時の軌跡を描画
+     */
+    private drawHardDropTrail(): void {
+        const now = Date.now();
+        this.hardDropTrail = this.hardDropTrail.filter(trail => {
+            const elapsed = now - trail.time;
+            if (elapsed > 500) return false;
+
+            const alpha = 1 - (elapsed / 500);
+            const x = trail.x * this.CELL_SIZE;
+            const y = trail.y * this.CELL_SIZE;
+
+            // 軌跡エフェクト
+            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
+            this.gameCtx.fillRect(x + 5, y + 5, this.CELL_SIZE - 10, this.CELL_SIZE - 10);
+
+            return true;
+        });
+    }
+
+    /**
+     * タスク4: ボードの境界線のアニメーションを更新
+     */
+    private updateBoardBorderAnimation(): void {
+        this.boardBorderPulse += 0.05;
+        if (this.boardBorderPulse > Math.PI * 2) {
+            this.boardBorderPulse = 0;
+        }
+    }
+
+    /**
+     * タスク5: スコア倍率表示
+     */
+    private drawScoreMultiplier(game: Game): void {
+        const level = game.getScoreSystem().getLevel();
+        const multiplier = level;
+        const x = this.gameCanvas.width - 120;
+        const y = 30;
+
+        this.gameCtx.fillStyle = '#8b949e';
+        this.gameCtx.font = '14px monospace';
+        this.gameCtx.textAlign = 'left';
+        this.gameCtx.fillText(`x${multiplier}`, x, y);
+    }
+
+    /**
+     * タスク39: グリッド線の表示/非表示を切り替え
+     */
+    toggleGrid(): void {
+        this.showGrid = !this.showGrid;
     }
 
     /**
