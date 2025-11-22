@@ -1,0 +1,24 @@
+{
+  "name": "tetris",
+  "version": "1.0.0",
+  "description": "Full-featured Tetris game with GitHub-style UI/UX",
+  "main": "src/main.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "serve": "npx http-server . -p 8080",
+    "auto-improve": "ts-node scripts/auto-improve.ts"
+  },
+  "keywords": ["tetris", "game", "typescript"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "openai": "^4.20.1",
+    "@octokit/rest": "^20.0.2",
+    "simple-git": "^3.20.0"
+  }
+}
+
