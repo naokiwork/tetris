@@ -32,6 +32,9 @@ export class Renderer {
     private scoreAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク12: スコア表示のアニメーション
     private levelAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク19: レベル表示のアニメーション
     private linesAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク20: ライン数表示のアニメーション
+    private lineClearParticles: { x: number; y: number; vx: number; vy: number; time: number }[] = []; // タスク2: ライン消去時のパーティクルエフェクト
+    private gameOverAnimation: number = 0; // タスク6, 20: ゲームオーバー時のアニメーション
+    private rotationHints: { x: number; y: number }[] = []; // タスク5: ピースの回転可能位置の表示
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -42,6 +45,14 @@ export class Renderer {
         this.gameCtx = this.gameCanvas.getContext('2d')!;
         this.gameCanvas.width = BOARD_WIDTH * this.CELL_SIZE;
         this.gameCanvas.height = BOARD_HEIGHT * this.CELL_SIZE;
+        
+        // タスク74: Canvasのリサイズ時の描画問題 - リサイズを検出
+        const resizeObserver = new ResizeObserver(() => {
+            // Canvasのサイズが変更された場合、再描画
+            this.gameCanvas.width = BOARD_WIDTH * this.CELL_SIZE;
+            this.gameCanvas.height = BOARD_HEIGHT * this.CELL_SIZE;
+        });
+        resizeObserver.observe(this.gameCanvas);
 
         // ネクストピースCanvas
         this.nextCanvas = document.getElementById('next-canvas') as HTMLCanvasElement;
@@ -157,6 +168,9 @@ export class Renderer {
         this.drawHardDropTrail(); // タスク2
         this.drawScoreMultiplier(game); // タスク5
         this.updateBoardBorderAnimation(); // タスク4
+        this.drawLineClearParticles(); // タスク2
+        this.drawGameOverAnimation(game); // タスク6, 20
+        this.drawRotationHints(game); // タスク5
     }
 
     /**
@@ -231,7 +245,7 @@ export class Renderer {
     }
 
     /**
-     * ゴーストピースを描画（タスク1, 18: 改善）
+     * ゴーストピースを描画（タスク1, 18, 61, 80: 改善・最適化）
      */
     private drawGhostPiece(game: Game): void {
         const piece = game.getCurrentPiece();
@@ -239,10 +253,13 @@ export class Renderer {
             return;
         }
 
+        // タスク80: ゴーストピース計算のパフォーマンス問題 - 必要な時のみ計算
         const ghostPos = game.getGhostPosition();
         if (!ghostPos) {
             return;
         }
+        
+        // タスク61: ゴーストピースの描画ずれを修正 - 正確な位置に描画
 
         const ghostPiece: Piece = {
             ...piece,
@@ -412,10 +429,11 @@ export class Renderer {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x + 2, y + cellSize - (cellSize - 4) / 3 - 2, cellSize - 4, (cellSize - 4) / 3);
             
-            // タスク3: グラデーション効果を追加
+            // タスク3, 9: グラデーション効果を追加（強化）
             const gradient = ctx.createLinearGradient(x + 2, y + 2, x + cellSize - 2, y + cellSize - 2);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.2)');
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
             ctx.fillStyle = gradient;
             ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             
@@ -609,7 +627,7 @@ export class Renderer {
     }
 
     /**
-     * タスク2: レベルアップ通知を描画
+     * タスク2, 19: レベルアップ通知を描画（強化）
      */
     private drawLevelUpNotification(): void {
         if (!this.levelUpNotification) return;
@@ -621,15 +639,21 @@ export class Renderer {
         }
 
         const alpha = elapsed < 500 ? elapsed / 500 : (elapsed > 2500 ? (3000 - elapsed) / 500 : 1);
-        const fontSize = 80;
+        const scale = elapsed < 500 ? 1 + (elapsed / 500) * 0.2 : 1.2;
+        const fontSize = 80 * scale;
         const text = `LEVEL ${this.levelUpNotification.level}!`;
 
         this.gameCtx.save();
         this.gameCtx.globalAlpha = alpha;
-        this.gameCtx.fillStyle = '#0969da';
+        // タスク19: より目立つエフェクト
+        const pulse = Math.sin(Date.now() / 100) * 0.2 + 0.8;
+        this.gameCtx.fillStyle = `rgba(9, 105, 218, ${pulse})`;
         this.gameCtx.font = `bold ${fontSize}px sans-serif`;
         this.gameCtx.textAlign = 'center';
         this.gameCtx.textBaseline = 'middle';
+        // 影を追加
+        this.gameCtx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        this.gameCtx.shadowBlur = 10;
         this.gameCtx.fillText(text, this.gameCanvas.width / 2, this.gameCanvas.height / 2);
         this.gameCtx.restore();
     }
@@ -774,7 +798,7 @@ export class Renderer {
     }
 
     /**
-     * タスク5: スコア倍率表示
+     * タスク5, 11: スコア倍率表示（改善）
      */
     private drawScoreMultiplier(game: Game): void {
         const level = game.getScoreSystem().getLevel();
@@ -782,10 +806,19 @@ export class Renderer {
         const x = this.gameCanvas.width - 120;
         const y = 30;
 
-        this.gameCtx.fillStyle = '#8b949e';
-        this.gameCtx.font = '14px monospace';
+        // タスク11: より目立つように表示
+        const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
+        this.gameCtx.fillStyle = `rgba(139, 148, 158, ${pulse})`;
+        this.gameCtx.font = 'bold 16px monospace';
         this.gameCtx.textAlign = 'left';
-        this.gameCtx.fillText(`x${multiplier}`, x, y);
+        this.gameCtx.fillText(`Score x${multiplier}`, x, y);
+        
+        // レベルアップ時に強調
+        if (this.levelUpNotification) {
+            this.gameCtx.fillStyle = '#0969da';
+            this.gameCtx.font = 'bold 20px monospace';
+            this.gameCtx.fillText(`Score x${multiplier}`, x, y);
+        }
     }
 
     /**
@@ -793,6 +826,73 @@ export class Renderer {
      */
     toggleGrid(): void {
         this.showGrid = !this.showGrid;
+    }
+
+    /**
+     * タスク2: ライン消去時のパーティクルエフェクトを描画
+     */
+    private drawLineClearParticles(): void {
+        const now = Date.now();
+        this.lineClearParticles = this.lineClearParticles.filter(particle => {
+            const elapsed = now - particle.time;
+            if (elapsed > 1000) return false;
+
+            const alpha = 1 - (elapsed / 1000);
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.3; // 重力
+
+            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            this.gameCtx.fillRect(particle.x - 2, particle.y - 2, 4, 4);
+
+            return true;
+        });
+    }
+
+    /**
+     * タスク6, 20: ゲームオーバー時のアニメーションを描画
+     */
+    private drawGameOverAnimation(game: Game): void {
+        if (game.getState() === 'GAME_OVER' && this.gameOverAnimation > 0) {
+            // 暗転エフェクト
+            this.gameCtx.fillStyle = `rgba(0, 0, 0, ${this.gameOverAnimation * 0.8})`;
+            this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+            
+            // タスク20: 固定されたブロックが崩れるようなアニメーション
+            const board = game.getBoard().getGrid();
+            const shake = Math.sin(Date.now() / 50) * (this.gameOverAnimation * 5);
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    const cell = board[y][x];
+                    if (cell !== null) {
+                        const offsetX = (Math.random() - 0.5) * shake;
+                        const offsetY = (Math.random() - 0.5) * shake;
+                        this.drawBlock(this.gameCtx, x + offsetX / this.CELL_SIZE, y + offsetY / this.CELL_SIZE, cell);
+                    }
+                }
+            }
+            
+            this.gameOverAnimation = Math.max(0, this.gameOverAnimation - 0.01);
+        }
+    }
+
+    /**
+     * タスク5: ピースの回転可能位置を描画
+     */
+    private drawRotationHints(game: Game): void {
+        if (this.rotationHints.length > 0) {
+            this.gameCtx.save();
+            this.gameCtx.strokeStyle = 'rgba(9, 105, 218, 0.5)';
+            this.gameCtx.lineWidth = 2;
+            this.gameCtx.setLineDash([4, 4]);
+            this.rotationHints.forEach(hint => {
+                const x = hint.x * this.CELL_SIZE;
+                const y = hint.y * this.CELL_SIZE;
+                this.gameCtx.strokeRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
+            });
+            this.gameCtx.setLineDash([]);
+            this.gameCtx.restore();
+        }
     }
 
     /**

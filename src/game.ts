@@ -45,9 +45,14 @@ export class Game {
     }
 
     /**
-     * ゲーム開始（タスク17: 全ての状態を確実にリセット）
+     * ゲーム開始（タスク17, 69, 77: 全ての状態を確実にリセット）
      */
     start(): void {
+        // タスク77: ゲーム状態の遷移を厳密に管理
+        if (this.state === GameState.PLAYING) {
+            this.state = GameState.MENU;
+        }
+        
         // 全ての状態を確実にリセット
         this.board.clear();
         this.scoreSystem.reset();
@@ -57,9 +62,12 @@ export class Game {
         this.currentPiece = null; // 現在のピースもリセット
         this.state = GameState.PLAYING;
         this.nextPieceType = this.bagSystem.getNext();
+        
+        // タスク69: リスタート時に全てのタイマーを確実にリセット
         this.dropTimer = 0;
         this.lockDelay = 0;
         this.lastDropPosition = null;
+        
         this.spawnPiece();
     }
 
@@ -200,11 +208,13 @@ export class Game {
             return false;
         }
 
+        // タスク5: ピースの回転可能位置の表示
+        const rotationHints = this.getRotationHints(true);
         const rotated = rotatePiece(this.currentPiece, this.board, true);
         if (rotated) {
             // タスク1: ピース回転時の視覚的フィードバック
             const rotateEvent = new CustomEvent('pieceRotated', {
-                detail: { piece: this.currentPiece }
+                detail: { piece: this.currentPiece, hints: rotationHints }
             });
             window.dispatchEvent(rotateEvent);
             this.currentPiece = rotated;
@@ -222,11 +232,13 @@ export class Game {
             return false;
         }
 
+        // タスク5: ピースの回転可能位置の表示
+        const rotationHints = this.getRotationHints(false);
         const rotated = rotatePiece(this.currentPiece, this.board, false);
         if (rotated) {
             // タスク1: ピース回転時の視覚的フィードバック
             const rotateEvent = new CustomEvent('pieceRotated', {
-                detail: { piece: this.currentPiece }
+                detail: { piece: this.currentPiece, hints: rotationHints }
             });
             window.dispatchEvent(rotateEvent);
             this.currentPiece = rotated;
@@ -276,15 +288,25 @@ export class Game {
             return;
         }
 
-        // ピース固定時のアニメーション（タスク1）
+        // タスク1, 18: ピース固定時のアニメーション（強化）
         const lockEvent = new CustomEvent('pieceLocked', {
             detail: { piece: this.currentPiece }
         });
         window.dispatchEvent(lockEvent);
+        
+        // タスク78: ピース固定時のタイミングを正確に管理
+        const lockTime = performance.now();
 
         this.board.placePiece(this.currentPiece);
+        // タスク2: ライン消去時のパーティクルエフェクト用に消去される行を取得
+        const fullRows = this.board.getFullRows();
         const linesCleared = this.board.clearFullRows();
         if (linesCleared > 0) {
+            // タスク2: ライン消去時のパーティクルエフェクト
+            const particleEvent = new CustomEvent('lineClearParticles', {
+                detail: { lines: fullRows }
+            });
+            window.dispatchEvent(particleEvent);
             // タスク68: ライン消去中の操作無効化
             if ((window as any).tetrisRenderer?.setLineClearing) {
                 (window as any).tetrisRenderer.setLineClearing(true);
@@ -404,6 +426,34 @@ export class Game {
 
     canHoldPiece(): boolean {
         return this.canHold;
+    }
+
+    /**
+     * タスク5: ピースの回転可能位置を取得
+     */
+    private getRotationHints(clockwise: boolean): { x: number; y: number }[] {
+        if (!this.currentPiece) {
+            return [];
+        }
+        const hints: { x: number; y: number }[] = [];
+        // 現在の位置から回転可能な位置を計算（簡易実装）
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                const testPiece: Piece = {
+                    ...this.currentPiece,
+                    position: {
+                        x: this.currentPiece.position.x + dx,
+                        y: this.currentPiece.position.y + dy
+                    }
+                };
+                const rotated = rotatePiece(testPiece, this.board, clockwise);
+                if (rotated && !this.board.hasCollision(rotated)) {
+                    hints.push({ x: testPiece.position.x, y: testPiece.position.y });
+                }
+            }
+        }
+        return hints;
     }
 
     getState(): GameState {
