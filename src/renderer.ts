@@ -14,8 +14,8 @@ export class Renderer {
     private holdCtx: CanvasRenderingContext2D;
 
     private readonly CELL_SIZE = 40; // 30から40に拡大（約33%大きくなる）
-    private readonly GRID_COLOR = '#3d4147'; // より明るいグリッド線
-    private readonly BG_COLOR = '#1a1d23'; // 少し明るい背景色
+    private readonly GRID_COLOR = '#8b949e'; // より明るいグリッド線（見やすく）
+    private readonly BG_COLOR = '#2d3136'; // より明るい背景色（GitHub風、見やすく）
     private readonly GHOST_ALPHA = 0.3;
     private lineClearFlash: number = 0;
     private lastKeyPress: { key: string; time: number } | null = null;
@@ -104,9 +104,9 @@ export class Renderer {
             this.gameCtx.stroke();
         }
 
-        // ボードの境界線を強調
-        this.gameCtx.strokeStyle = '#656d76';
-        this.gameCtx.lineWidth = 2;
+        // ボードの境界線を強調（より明るく、太く）
+        this.gameCtx.strokeStyle = '#8b949e';
+        this.gameCtx.lineWidth = 3;
         this.gameCtx.strokeRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
 
         // 固定されたブロックを描画
@@ -261,22 +261,28 @@ export class Renderer {
             ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             ctx.setLineDash([]);
         } else {
-            // 通常のブロック（より見やすく）
+            // 通常のブロック（より見やすく、明るく）
+            // 背景を明るく塗りつぶし
             ctx.fillStyle = color;
-            ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+            ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             
             // ハイライト（より明るく）
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fillRect(x + 1, y + 1, cellSize - 2, (cellSize - 2) / 3);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fillRect(x + 2, y + 2, cellSize - 4, (cellSize - 4) / 3);
             
-            // シャドウ
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.fillRect(x + 1, y + cellSize - (cellSize - 2) / 3, cellSize - 2, (cellSize - 2) / 3);
+            // シャドウ（控えめに）
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(x + 2, y + cellSize - (cellSize - 4) / 3 - 2, cellSize - 4, (cellSize - 4) / 3);
             
-            // アウトライン（より太く、明るく）
+            // アウトライン（より太く、明るく、確実に見えるように）
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+            
+            // 内側のアウトライン（コントラストを強化）
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
         }
     }
 
