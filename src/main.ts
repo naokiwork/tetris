@@ -178,7 +178,7 @@ class TetrisApp {
     }
 
     /**
-     * 統計モーダルを表示
+     * 統計モーダルを表示（タスク24: パフォーマンス統計の表示UI追加）
      */
     private showStatsModal(): void {
         const modal = document.getElementById('stats-modal');
@@ -195,6 +195,20 @@ class TetrisApp {
             if (totalLinesEl) totalLinesEl.textContent = stats.totalLines.toString();
             if (avgScoreEl) avgScoreEl.textContent = stats.totalGames > 0 ? Math.floor(stats.totalScore / stats.totalGames).toString() : '0';
             if (highestLevelEl) highestLevelEl.textContent = stats.highestLevel.toString();
+
+            // タスク24: パフォーマンス統計の表示
+            const perfStats = (window as any).tetrisPerformanceStats || {};
+            const statsContent = document.getElementById('stats-content');
+            if (statsContent) {
+                const perfHtml = `
+                    <h3>Performance</h3>
+                    <p>Min FPS: ${perfStats.minFPS || 60}</p>
+                    <p>Max FPS: ${perfStats.maxFPS || 60}</p>
+                    <p>Frame Drops: ${perfStats.frameDrops || 0}</p>
+                    <p>Current FPS: ${perfStats.currentFPS || 60}</p>
+                `;
+                statsContent.innerHTML += perfHtml;
+            }
 
             modal.classList.remove('hidden');
         }
@@ -419,8 +433,18 @@ class TetrisApp {
                 this.renderDebugInfo();
             }
 
-            // ゲームオーバー処理
+            // ゲームオーバー処理（タスク6, 20, 65: アニメーション強化・UIフリーズ修正）
             if (this.game.getState() === GameState.GAME_OVER) {
+                // タスク65: ゲームオーバー時にすべてのゲームループとタイマーを停止
+                if (this.animationFrameId !== null) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                
+                // タスク6, 20: ゲームオーバー時のアニメーション
+                const gameOverEvent = new CustomEvent('gameOver', {});
+                window.dispatchEvent(gameOverEvent);
+                
                 const finalScore = this.game.getScoreSystem().getScore();
                 const finalLevel = this.game.getScoreSystem().getLevel();
                 const finalLines = this.game.getScoreSystem().getLines();
@@ -430,7 +454,11 @@ class TetrisApp {
                 if (finalScore > 0) {
                     this.saveToRanking(finalScore, finalLevel);
                 }
-                this.showGameOverModal();
+                
+                // タスク6: アニメーション後にモーダルを表示
+                setTimeout(() => {
+                    this.showGameOverModal();
+                }, 1000);
                 
                 // タスク15: オートリプレイ機能（設定で有効な場合）
                 const settings = (window as any).tetrisSettings || { autoReplay: false };
@@ -438,8 +466,11 @@ class TetrisApp {
                     setTimeout(() => {
                         this.hideGameOverModal();
                         this.startGameWithCountdown();
-                    }, 3000);
+                    }, 4000);
                 }
+                
+                // タスク65: UI要素が正しくインタラクティブになるように状態を管理
+                return; // ゲームループを停止
             }
 
             // 次のフレーム
@@ -499,6 +530,61 @@ class TetrisApp {
             frameDrops: this.frameDrops,
             currentFPS: this.fps
         };
+    }
+
+    /**
+     * タスク25: データのエクスポート
+     */
+    private exportData(): void {
+        const data = {
+            stats: this.loadGameStats(),
+            rankings: this.loadRankings(),
+            highScore: this.loadHighScore(),
+            exportDate: new Date().toISOString()
+        };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tetris-data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * タスク25: データのインポート
+     */
+    private importData(): void {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target?.result as string);
+                    if (data.stats) {
+                        localStorage.setItem('tetris-stats', JSON.stringify(data.stats));
+                    }
+                    if (data.rankings) {
+                        localStorage.setItem('tetris-rankings', JSON.stringify(data.rankings));
+                    }
+                    if (data.highScore !== undefined) {
+                        localStorage.setItem('tetris-high-score', data.highScore.toString());
+                    }
+                    alert('データをインポートしました。');
+                    location.reload();
+                } catch (error) {
+                    alert('データのインポートに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     }
 
     /**

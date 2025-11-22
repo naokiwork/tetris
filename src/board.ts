@@ -74,7 +74,7 @@ export class Board {
     }
 
     /**
-     * 完全に埋まっている行を検出
+     * 完全に埋まっている行を検出（タスク2: パーティクルエフェクト用に公開）
      */
     getFullRows(): number[] {
         const fullRows: number[] = [];

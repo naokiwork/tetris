@@ -25,6 +25,8 @@ export class ScoreSystem {
                 detail: { oldLevel, newLevel }
             });
             window.dispatchEvent(levelUpEvent);
+            // タスク67: レベルアップ時に落下速度を確実に更新
+            // getDropInterval()が呼ばれるたびに最新のレベルを使用するため、自動的に更新される
         }
 
         // スコア計算（整数演算に統一）
@@ -45,7 +47,8 @@ export class ScoreSystem {
         }
 
         const scoreIncrease = Math.floor(baseScore * this.level);
-        const MAX_SCORE = 999999;
+        // タスク71: スコアのオーバーフロー対策
+        const MAX_SCORE = 99999999; // 8桁の最大値
         this.score = Math.min(this.score + scoreIncrease, MAX_SCORE);
     }
 

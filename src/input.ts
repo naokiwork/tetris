@@ -45,7 +45,7 @@ export class InputHandler {
     }
 
     private setupEventListeners(): void {
-        // 既存のリスナーを削除（重複登録を防ぐ）
+        // タスク76: イベントリスナーの重複登録を防ぐ
         this.cleanup();
         
         this.keyDownHandler = (e: KeyboardEvent) => this.handleKeyDown(e);
@@ -119,7 +119,7 @@ export class InputHandler {
     }
 
     /**
-     * 入力キューを処理（非同期で高速な連続入力に対応）
+     * 入力キューを処理（非同期で高速な連続入力に対応）（タスク73: 重複処理防止）
      */
     private async processInputQueue(): Promise<void> {
         if (this.isProcessing || this.inputQueue.length === 0) {
@@ -131,9 +131,12 @@ export class InputHandler {
         // 次のフレームで処理（非同期）
         await new Promise(resolve => requestAnimationFrame(resolve));
         
+        // タスク73: キー入力の重複処理を防ぐ
+        const processedKeys = new Set<string>();
         while (this.inputQueue.length > 0) {
             const key = this.inputQueue.shift();
-            if (!key) continue;
+            if (!key || processedKeys.has(key)) continue;
+            processedKeys.add(key);
 
             switch (key) {
                 case 'ArrowLeft':
