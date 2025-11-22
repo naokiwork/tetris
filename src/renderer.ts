@@ -17,6 +17,8 @@ export class Renderer {
     private readonly GRID_COLOR = '#21262d';
     private readonly BG_COLOR = '#0d1117';
     private readonly GHOST_ALPHA = 0.3;
+    private lineClearFlash: number = 0;
+    private lastKeyPress: { key: string; time: number } | null = null;
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -41,6 +43,11 @@ export class Renderer {
             throw new Error('Hold canvas not found');
         }
         this.holdCtx = this.holdCanvas.getContext('2d')!;
+
+        // ライン消去エフェクトのイベントリスナー
+        window.addEventListener('lineClear', ((e: CustomEvent) => {
+            this.lineClearFlash = 0.8;
+        }) as EventListener);
     }
 
     /**
@@ -54,6 +61,9 @@ export class Renderer {
         this.drawNextPiece(game);
         this.drawHoldPiece(game);
         this.updateUI(game);
+        this.drawSpeedIndicator(game);
+        this.drawKeyPressFeedback();
+        this.drawLineClearEffect();
     }
 
     /**
@@ -274,20 +284,64 @@ export class Renderer {
     private updateUI(game: Game): void {
         const scoreSystem = game.getScoreSystem();
         
-        const scoreElement = document.getElementById('score');
-        if (scoreElement) {
-            scoreElement.textContent = scoreSystem.formatScore();
-        }
+        // requestAnimationFrameを使用して確実に更新
+        requestAnimationFrame(() => {
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) {
+                scoreElement.textContent = scoreSystem.formatScore();
+            }
 
-        const levelElement = document.getElementById('level');
-        if (levelElement) {
-            levelElement.textContent = scoreSystem.formatLevel();
-        }
+            const levelElement = document.getElementById('level');
+            if (levelElement) {
+                levelElement.textContent = scoreSystem.formatLevel();
+            }
 
-        const linesElement = document.getElementById('lines');
-        if (linesElement) {
-            linesElement.textContent = scoreSystem.formatLines();
+            const linesElement = document.getElementById('lines');
+            if (linesElement) {
+                linesElement.textContent = scoreSystem.formatLines();
+            }
+        });
+    }
+
+    /**
+     * ゲーム速度インジケーターを描画
+     */
+    private drawSpeedIndicator(game: Game): void {
+        const dropInterval = game.getScoreSystem().getDropInterval();
+        const level = game.getScoreSystem().getLevel();
+        
+        // 速度インジケーターをCanvas上に描画
+        this.gameCtx.fillStyle = level >= 10 ? '#ef4444' : level >= 5 ? '#f97316' : '#22c55e';
+        this.gameCtx.fillRect(5, 5, Math.min(50, (1000 - dropInterval) / 20), 5);
+    }
+
+    /**
+     * キー入力フィードバックを描画
+     */
+    private drawKeyPressFeedback(): void {
+        if (this.lastKeyPress && Date.now() - this.lastKeyPress.time < 200) {
+            this.gameCtx.fillStyle = 'rgba(9, 105, 218, 0.5)';
+            this.gameCtx.font = '16px monospace';
+            this.gameCtx.fillText(this.lastKeyPress.key, 10, 25);
         }
+    }
+
+    /**
+     * ライン消去エフェクトを描画
+     */
+    private drawLineClearEffect(): void {
+        if (this.lineClearFlash > 0) {
+            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${this.lineClearFlash})`;
+            this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+            this.lineClearFlash = Math.max(0, this.lineClearFlash - 0.1);
+        }
+    }
+
+    /**
+     * キー入力フィードバックを設定
+     */
+    setKeyPressFeedback(key: string): void {
+        this.lastKeyPress = { key, time: Date.now() };
     }
 }
 

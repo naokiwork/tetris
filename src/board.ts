@@ -117,9 +117,22 @@ export class Board {
     clearFullRows(): number {
         const fullRows = this.getFullRows();
         if (fullRows.length > 0) {
+            // ライン消去エフェクトをトリガー
+            this.triggerLineClearEffect(fullRows);
             this.clearRows(fullRows);
         }
         return fullRows.length;
+    }
+
+    /**
+     * ライン消去エフェクトをトリガー
+     */
+    private triggerLineClearEffect(rows: number[]): void {
+        // フラッシュエフェクト用のイベントを発火
+        const event = new CustomEvent('lineClear', { 
+            detail: { rows, count: rows.length } 
+        });
+        window.dispatchEvent(event);
     }
 
     /**

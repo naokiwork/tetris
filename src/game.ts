@@ -38,9 +38,12 @@ export class Game {
         this.scoreSystem.reset();
         this.bagSystem = new BagSystem();
         this.holdPieceType = null;
-        this.canHold = true;
+        this.canHold = true; // ホールド機能の状態を確実にリセット
         this.state = GameState.PLAYING;
         this.nextPieceType = this.bagSystem.getNext();
+        this.dropTimer = 0;
+        this.lockDelay = 0;
+        this.lastDropPosition = null;
         this.spawnPiece();
     }
 
