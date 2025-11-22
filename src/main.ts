@@ -32,6 +32,11 @@ class TetrisApp {
             // Rendererのキー入力フィードバック機能を呼び出し
             this.renderer.setKeyPressFeedback(key);
         });
+        // タスク68: ライン消去中の操作無効化用のグローバル参照を設定
+        (window as any).tetrisRenderer = {
+            isLineClearingActive: () => this.renderer.isLineClearingActive(),
+            setLineClearing: (clearing: boolean) => this.renderer.setLineClearing(clearing)
+        };
         this.setupUI();
     }
 

@@ -3,6 +3,16 @@ import { Piece, PieceType, GameState, Position } from './types';
 import { createPiece, rotatePiece, BagSystem } from './pieces';
 import { ScoreSystem } from './score';
 
+// タスク68: ライン消去中の操作無効化用のグローバルフラグ
+declare global {
+    interface Window {
+        tetrisRenderer?: {
+            isLineClearingActive?: () => boolean;
+            setLineClearing?: (clearing: boolean) => void;
+        };
+    }
+}
+
 /**
  * ゲーム管理クラス
  */
@@ -176,6 +186,8 @@ export class Game {
                 }
             };
             this.scoreSystem.addHardDrop(dropDistance - 1);
+            // タスク62: ハードドロップ後はロック遅延をスキップして即座に固定
+            this.lockDelay = this.lockDelayTime; // ロック遅延を最大にして即座に固定
             this.lockPiece();
         }
     }
@@ -263,7 +275,29 @@ export class Game {
         this.board.placePiece(this.currentPiece);
         const linesCleared = this.board.clearFullRows();
         if (linesCleared > 0) {
+            // タスク68: ライン消去中の操作無効化
+            if ((window as any).tetrisRenderer?.setLineClearing) {
+                (window as any).tetrisRenderer.setLineClearing(true);
+            }
+            
+            // タスク13: テトリスの特別エフェクト
+            if (linesCleared === 4) {
+                const tetrisEvent = new CustomEvent('tetris', {});
+                window.dispatchEvent(tetrisEvent);
+            }
+            // タスク14: コンボ表示
+            const comboEvent = new CustomEvent('combo', {
+                detail: { count: linesCleared }
+            });
+            window.dispatchEvent(comboEvent);
             this.scoreSystem.addLines(linesCleared);
+            
+            // タスク68: ライン消去アニメーション後に操作を再有効化
+            setTimeout(() => {
+                if ((window as any).tetrisRenderer?.setLineClearing) {
+                    (window as any).tetrisRenderer.setLineClearing(false);
+                }
+            }, 500); // 500ms後に再有効化
         }
         this.spawnPiece();
     }

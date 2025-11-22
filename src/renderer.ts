@@ -21,6 +21,10 @@ export class Renderer {
     private lastKeyPress: { key: string; time: number } | null = null;
     private pieceLockFlash: { x: number; y: number; time: number }[] = []; // タスク1: ピース固定アニメーション
     private levelUpNotification: { level: number; time: number } | null = null; // タスク2: レベルアップ通知
+    private tetrisFlash: number = 0; // タスク13: テトリスの特別エフェクト
+    private comboCount: number = 0; // タスク14: コンボ表示
+    private comboTime: number = 0; // タスク14: コンボ表示
+    private isLineClearing: boolean = false; // タスク68: ライン消去中の操作無効化
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -69,6 +73,28 @@ export class Renderer {
                 level: e.detail.newLevel,
                 time: Date.now()
             };
+        }) as EventListener);
+
+        // タスク13: テトリスの特別エフェクト
+        window.addEventListener('tetris', (() => {
+            this.tetrisFlash = 1.0;
+        }) as EventListener);
+
+        // タスク14: コンボ表示
+        window.addEventListener('combo', ((e: CustomEvent) => {
+            this.comboCount = e.detail.count;
+            this.comboTime = Date.now();
+        }) as EventListener);
+
+        // タスク13: テトリスの特別エフェクト
+        window.addEventListener('tetris', (() => {
+            this.tetrisFlash = 1.0;
+        }) as EventListener);
+
+        // タスク14: コンボ表示
+        window.addEventListener('combo', ((e: CustomEvent) => {
+            this.comboCount = e.detail.count;
+            this.comboTime = Date.now();
         }) as EventListener);
     }
 
@@ -157,7 +183,7 @@ export class Renderer {
     }
 
     /**
-     * ゴーストピースを描画
+     * ゴーストピースを描画（タスク1, 18: 改善）
      */
     private drawGhostPiece(game: Game): void {
         const piece = game.getCurrentPiece();
@@ -176,8 +202,18 @@ export class Renderer {
         };
 
         this.gameCtx.save();
-        this.gameCtx.globalAlpha = this.GHOST_ALPHA;
-        this.drawPiece(this.gameCtx, ghostPiece, this.CELL_SIZE, true);
+        // タスク18: より目立つ色とアニメーション
+        const pulse = Math.sin(Date.now() / 200) * 0.2 + 0.5;
+        this.gameCtx.globalAlpha = pulse;
+        this.gameCtx.strokeStyle = '#00f0ff';
+        this.gameCtx.lineWidth = 3;
+        this.gameCtx.setLineDash([6, 4]); // タスク1: 点線で描画
+        piece.shape.forEach((block: { x: number; y: number }) => {
+            const x = (ghostPiece.position.x + block.x) * this.CELL_SIZE;
+            const y = (ghostPiece.position.y + block.y) * this.CELL_SIZE;
+            this.gameCtx.strokeRect(x + 2, y + 2, this.CELL_SIZE - 4, this.CELL_SIZE - 4);
+        });
+        this.gameCtx.setLineDash([]);
         this.gameCtx.restore();
     }
 
@@ -474,6 +510,68 @@ export class Renderer {
         this.gameCtx.font = '14px monospace';
         this.gameCtx.textAlign = 'left';
         this.gameCtx.fillText(`Drop: ${dropInterval}ms`, x, y);
+    }
+
+    /**
+     * タスク13: テトリスの特別エフェクト
+     */
+    private drawTetrisEffect(): void {
+        if (this.tetrisFlash > 0) {
+            this.gameCtx.fillStyle = `rgba(0, 240, 255, ${this.tetrisFlash})`;
+            this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+            this.tetrisFlash = Math.max(0, this.tetrisFlash - 0.05);
+        }
+    }
+
+    /**
+     * タスク14: コンボ表示
+     */
+    private drawComboDisplay(): void {
+        if (this.comboCount > 0 && Date.now() - this.comboTime < 2000) {
+            const elapsed = Date.now() - this.comboTime;
+            const alpha = elapsed < 500 ? 1 : (elapsed > 1500 ? (2000 - elapsed) / 500 : 1);
+            
+            this.gameCtx.save();
+            this.gameCtx.globalAlpha = alpha;
+            this.gameCtx.fillStyle = '#ffeb3b';
+            this.gameCtx.font = 'bold 48px sans-serif';
+            this.gameCtx.textAlign = 'center';
+            this.gameCtx.textBaseline = 'middle';
+            this.gameCtx.fillText(`${this.comboCount} LINES!`, this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
+            this.gameCtx.restore();
+        } else if (this.comboCount > 0) {
+            this.comboCount = 0;
+        }
+    }
+
+    /**
+     * タスク3: 一時停止中のUI改善
+     */
+    private drawPausedOverlay(game: Game): void {
+        if (game.getState() === 'PAUSED') {
+            this.gameCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
+            
+            this.gameCtx.fillStyle = '#ffffff';
+            this.gameCtx.font = 'bold 60px sans-serif';
+            this.gameCtx.textAlign = 'center';
+            this.gameCtx.textBaseline = 'middle';
+            this.gameCtx.fillText('PAUSED', this.gameCanvas.width / 2, this.gameCanvas.height / 2);
+        }
+    }
+
+    /**
+     * タスク68: ライン消去中の操作無効化フラグを設定
+     */
+    setLineClearing(clearing: boolean): void {
+        this.isLineClearing = clearing;
+    }
+
+    /**
+     * タスク68: ライン消去中かどうかを取得
+     */
+    isLineClearingActive(): boolean {
+        return this.isLineClearing;
     }
 
     /**

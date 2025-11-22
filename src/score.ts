@@ -130,10 +130,10 @@ export class ScoreSystem {
     }
 
     /**
-     * スコアをフォーマット（6桁）
+     * スコアをフォーマット（タスク4: 8桁に拡張）
      */
     formatScore(): string {
-        return String(this.score).padStart(6, '0');
+        return String(this.score).padStart(8, '0');
     }
 
     /**
