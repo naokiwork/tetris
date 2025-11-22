@@ -21,8 +21,8 @@ export class ScoreSystem {
             this.level = newLevel;
         }
 
-        // スコア計算
-        let baseScore = 0;
+        // スコア計算（整数演算に統一）
+        let baseScore: number = 0;
         switch (linesCleared) {
             case 1:
                 baseScore = 100;
@@ -38,7 +38,9 @@ export class ScoreSystem {
                 break;
         }
 
-        this.score += baseScore * this.level;
+        const scoreIncrease = Math.floor(baseScore * this.level);
+        const MAX_SCORE = 999999;
+        this.score = Math.min(this.score + scoreIncrease, MAX_SCORE);
     }
 
     /**

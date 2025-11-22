@@ -261,11 +261,20 @@ export class Game {
             return;
         }
 
+        // 異常に大きなdeltaTimeを無視（タブが非アクティブになった場合など）
+        if (deltaTime > 1000) {
+            return;
+        }
+
+        // より正確な時間計測のため、performance.now()を使用
+        const currentTime = performance.now();
+        const preciseDeltaTime = Math.min(deltaTime, 100); // 最大100msに制限
+
         // ロック遅延チェック
         if (this.lastDropPosition && 
             this.currentPiece.position.x === this.lastDropPosition.x &&
             this.currentPiece.position.y === this.lastDropPosition.y) {
-            this.lockDelay += deltaTime;
+            this.lockDelay += preciseDeltaTime;
             if (this.lockDelay >= this.lockDelayTime) {
                 this.lockPiece();
                 return;
@@ -275,7 +284,7 @@ export class Game {
         }
 
         // 自動落下
-        this.dropTimer += deltaTime;
+        this.dropTimer += preciseDeltaTime;
         const dropInterval = this.scoreSystem.getDropInterval();
 
         if (this.dropTimer >= dropInterval) {

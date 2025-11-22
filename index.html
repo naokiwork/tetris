@@ -52,7 +52,19 @@
                 <div class="controls-info">
                     <p><strong>Controls:</strong></p>
                     <p>← → : Move | ↑ : Hard Drop | ↓ : Soft Drop</p>
-                    <p>Z / X : Rotate | C : Hold | Space : Pause</p>
+                    <p>Z / X : Rotate | C : Hold | Space / P : Pause</p>
+                    <p><button id="help-btn" class="btn" style="margin-top:10px;">Help</button></p>
+                </div>
+            </div>
+            
+            <div class="info-panel" style="margin-top:10px;">
+                <div class="info-item">
+                    <span class="info-label">High Score:</span>
+                    <span class="info-value" id="high-score">000000</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">FPS:</span>
+                    <span class="info-value" id="fps">60</span>
                 </div>
             </div>
         </main>
@@ -61,7 +73,42 @@
             <div class="modal-content">
                 <h2>Game Over</h2>
                 <p>Final Score: <span id="final-score">000000</span></p>
+                <p>High Score: <span id="final-high-score">000000</span></p>
                 <button id="restart-btn" class="btn">Restart</button>
+            </div>
+        </div>
+        
+        <div id="help-modal" class="modal hidden">
+            <div class="modal-content" style="max-width:600px;">
+                <h2>How to Play</h2>
+                <div style="text-align:left;line-height:1.8;">
+                    <h3>Controls</h3>
+                    <ul>
+                        <li><strong>← →</strong>: Move piece left/right</li>
+                        <li><strong>↓</strong>: Soft drop (move down faster)</li>
+                        <li><strong>↑ / Space</strong>: Hard drop (instant drop to bottom)</li>
+                        <li><strong>Z</strong>: Rotate counter-clockwise</li>
+                        <li><strong>X</strong>: Rotate clockwise</li>
+                        <li><strong>C</strong>: Hold piece</li>
+                        <li><strong>P / Escape</strong>: Pause/Resume</li>
+                        <li><strong>D</strong>: Toggle debug mode</li>
+                    </ul>
+                    <h3>Rules</h3>
+                    <ul>
+                        <li>Clear lines by filling them completely</li>
+                        <li>Level up every 10 lines cleared</li>
+                        <li>Game speed increases with level</li>
+                        <li>Game over when pieces reach the top</li>
+                    </ul>
+                    <h3>Scoring</h3>
+                    <ul>
+                        <li>1 line: 100 × level</li>
+                        <li>2 lines: 300 × level</li>
+                        <li>3 lines: 500 × level</li>
+                        <li>4 lines (Tetris): 800 × level</li>
+                    </ul>
+                </div>
+                <button id="close-help-btn" class="btn" style="margin-top:20px;">Close</button>
             </div>
         </div>
     </div>
