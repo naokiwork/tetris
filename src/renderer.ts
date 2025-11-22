@@ -32,9 +32,10 @@ export class Renderer {
     private scoreAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク12: スコア表示のアニメーション
     private levelAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク19: レベル表示のアニメーション
     private linesAnimation: { oldValue: number; newValue: number; time: number } | null = null; // タスク20: ライン数表示のアニメーション
-    private lineClearParticles: { x: number; y: number; vx: number; vy: number; time: number }[] = []; // タスク2: ライン消去時のパーティクルエフェクト
-    private gameOverAnimation: number = 0; // タスク6, 20: ゲームオーバー時のアニメーション
-    private rotationHints: { x: number; y: number }[] = []; // タスク5: ピースの回転可能位置の表示
+    private lineClearParticles: { x: number; y: number; vx: number; vy: number; time: number; color: string; size: number }[] = []; // タスク2, 11: ライン消去時のパーティクルエフェクト（強化）
+    private gameOverAnimation: number = 0; // タスク6, 12, 20: ゲームオーバー時のアニメーション
+    private rotationHints: { x: number; y: number; time: number }[] = []; // タスク5, 13: ピースの回転可能位置の表示（改善）
+    private scoreMultiplierPulse: number = 0; // タスク14: スコア倍率表示のアニメーション
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -91,6 +92,8 @@ export class Renderer {
                 level: e.detail.newLevel,
                 time: Date.now()
             };
+            // タスク14: スコア倍率表示のアニメーション
+            this.scoreMultiplierPulse = 1.0;
         }) as EventListener);
 
         // タスク13: テトリスの特別エフェクト
@@ -267,15 +270,22 @@ export class Renderer {
         };
 
         this.gameCtx.save();
-        // タスク18: より目立つ色とアニメーション
-        const pulse = Math.sin(Date.now() / 200) * 0.2 + 0.5;
-        this.gameCtx.globalAlpha = pulse;
-        this.gameCtx.strokeStyle = '#00f0ff';
-        this.gameCtx.lineWidth = 3;
-        this.gameCtx.setLineDash([6, 4]); // タスク1: 点線で描画
+        // タスク18, 20: より目立つ色とアニメーション（強化）
+        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.6;
+        // タスク15: 透明度のアニメーションを追加
+        const alphaPulse = Math.sin(Date.now() / 300) * 0.2 + 0.8;
+        this.gameCtx.globalAlpha = pulse * alphaPulse;
+        // タスク20: ゴーストピースをより目立つように表示し、アニメーションを追加
+        const hue = (Date.now() / 50) % 360;
+        this.gameCtx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+        this.gameCtx.lineWidth = 5; // より太く
+        this.gameCtx.setLineDash([8, 4]); // タスク1: 点線で描画
         piece.shape.forEach((block: { x: number; y: number }) => {
             const x = (ghostPiece.position.x + block.x) * this.CELL_SIZE;
             const y = (ghostPiece.position.y + block.y) * this.CELL_SIZE;
+            // タスク20: 内側のハイライトも追加
+            this.gameCtx.fillStyle = `hsla(${hue}, 100%, 60%, 0.1)`;
+            this.gameCtx.fillRect(x + 2, y + 2, this.CELL_SIZE - 4, this.CELL_SIZE - 4);
             this.gameCtx.strokeRect(x + 2, y + 2, this.CELL_SIZE - 4, this.CELL_SIZE - 4);
         });
         this.gameCtx.setLineDash([]);
@@ -429,12 +439,23 @@ export class Renderer {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x + 2, y + cellSize - (cellSize - 4) / 3 - 2, cellSize - 4, (cellSize - 4) / 3);
             
-            // タスク3, 9: グラデーション効果を追加（強化）
+            // タスク3, 9, 19: グラデーション効果を追加（強化）
             const gradient = ctx.createLinearGradient(x + 2, y + 2, x + cellSize - 2, y + cellSize - 2);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.1)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+            gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.2)');
+            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
             ctx.fillStyle = gradient;
+            ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+            
+            // タスク19: より強調されたグラデーションで立体感を向上
+            const shadowGradient = ctx.createRadialGradient(
+                x + cellSize / 2, y + cellSize / 2, 0,
+                x + cellSize / 2, y + cellSize / 2, cellSize / 2
+            );
+            shadowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+            ctx.fillStyle = shadowGradient;
             ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
             
             // アウトライン（より太く、明るく、確実に見えるように）
@@ -798,7 +819,7 @@ export class Renderer {
     }
 
     /**
-     * タスク5, 11: スコア倍率表示（改善）
+     * タスク5, 11, 14: スコア倍率表示（改善・アニメーション追加）
      */
     private drawScoreMultiplier(game: Game): void {
         const level = game.getScoreSystem().getLevel();
@@ -806,17 +827,29 @@ export class Renderer {
         const x = this.gameCanvas.width - 120;
         const y = 30;
 
-        // タスク11: より目立つように表示
-        const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
-        this.gameCtx.fillStyle = `rgba(139, 148, 158, ${pulse})`;
-        this.gameCtx.font = 'bold 16px monospace';
-        this.gameCtx.textAlign = 'left';
-        this.gameCtx.fillText(`Score x${multiplier}`, x, y);
-        
-        // レベルアップ時に強調
+        // タスク14: スコア倍率表示にアニメーションを追加
         if (this.levelUpNotification) {
+            this.scoreMultiplierPulse = 1.0;
+        }
+        
+        if (this.scoreMultiplierPulse > 0) {
+            this.scoreMultiplierPulse = Math.max(0, this.scoreMultiplierPulse - 0.02);
+            const scale = 1 + this.scoreMultiplierPulse * 0.3;
+            const alpha = 0.8 + this.scoreMultiplierPulse * 0.2;
+            
+            this.gameCtx.save();
+            this.gameCtx.globalAlpha = alpha;
             this.gameCtx.fillStyle = '#0969da';
-            this.gameCtx.font = 'bold 20px monospace';
+            this.gameCtx.font = `bold ${16 * scale}px monospace`;
+            this.gameCtx.textAlign = 'left';
+            this.gameCtx.fillText(`Score x${multiplier}`, x, y);
+            this.gameCtx.restore();
+        } else {
+            // タスク11: より目立つように表示
+            const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
+            this.gameCtx.fillStyle = `rgba(139, 148, 158, ${pulse})`;
+            this.gameCtx.font = 'bold 16px monospace';
+            this.gameCtx.textAlign = 'left';
             this.gameCtx.fillText(`Score x${multiplier}`, x, y);
         }
     }
@@ -829,7 +862,7 @@ export class Renderer {
     }
 
     /**
-     * タスク2: ライン消去時のパーティクルエフェクトを描画
+     * タスク2, 11: ライン消去時のパーティクルエフェクトを描画（強化）
      */
     private drawLineClearParticles(): void {
         const now = Date.now();
@@ -842,57 +875,82 @@ export class Renderer {
             particle.y += particle.vy;
             particle.vy += 0.3; // 重力
 
-            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-            this.gameCtx.fillRect(particle.x - 2, particle.y - 2, 4, 4);
+            // タスク11: パーティクルエフェクトをより派手にし、色やサイズを多様化
+            const size = particle.size || 4;
+            this.gameCtx.fillStyle = particle.color || `rgba(255, 255, 255, ${alpha})`;
+            this.gameCtx.beginPath();
+            this.gameCtx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+            this.gameCtx.fill();
 
             return true;
         });
     }
 
     /**
-     * タスク6, 20: ゲームオーバー時のアニメーションを描画
+     * タスク6, 12, 20: ゲームオーバー時のアニメーションを描画（強化）
      */
     private drawGameOverAnimation(game: Game): void {
         if (game.getState() === 'GAME_OVER' && this.gameOverAnimation > 0) {
-            // 暗転エフェクト
-            this.gameCtx.fillStyle = `rgba(0, 0, 0, ${this.gameOverAnimation * 0.8})`;
+            // タスク12: より派手な暗転エフェクト
+            const pulse = Math.sin(Date.now() / 100) * 0.2 + 0.8;
+            this.gameCtx.fillStyle = `rgba(0, 0, 0, ${this.gameOverAnimation * 0.9 * pulse})`;
             this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
             
-            // タスク20: 固定されたブロックが崩れるようなアニメーション
+            // タスク12, 20: 固定されたブロックが崩れるようなアニメーション（強化）
             const board = game.getBoard().getGrid();
-            const shake = Math.sin(Date.now() / 50) * (this.gameOverAnimation * 5);
+            const shake = Math.sin(Date.now() / 50) * (this.gameOverAnimation * 8);
+            const rotation = Math.sin(Date.now() / 100) * (this.gameOverAnimation * 0.1);
             for (let y = 0; y < BOARD_HEIGHT; y++) {
                 for (let x = 0; x < BOARD_WIDTH; x++) {
                     const cell = board[y][x];
                     if (cell !== null) {
                         const offsetX = (Math.random() - 0.5) * shake;
                         const offsetY = (Math.random() - 0.5) * shake;
+                        const centerX = x * this.CELL_SIZE + this.CELL_SIZE / 2;
+                        const centerY = y * this.CELL_SIZE + this.CELL_SIZE / 2;
+                        
+                        this.gameCtx.save();
+                        this.gameCtx.translate(centerX, centerY);
+                        this.gameCtx.rotate(rotation);
+                        this.gameCtx.translate(-centerX, -centerY);
                         this.drawBlock(this.gameCtx, x + offsetX / this.CELL_SIZE, y + offsetY / this.CELL_SIZE, cell);
+                        this.gameCtx.restore();
                     }
                 }
             }
             
-            this.gameOverAnimation = Math.max(0, this.gameOverAnimation - 0.01);
+            this.gameOverAnimation = Math.max(0, this.gameOverAnimation - 0.008);
         }
     }
 
     /**
-     * タスク5: ピースの回転可能位置を描画
+     * タスク5, 13: ピースの回転可能位置を描画（改善）
      */
     private drawRotationHints(game: Game): void {
-        if (this.rotationHints.length > 0) {
+        const now = Date.now();
+        this.rotationHints = this.rotationHints.filter(hint => {
+            const elapsed = now - hint.time;
+            if (elapsed > 1000) return false;
+            
+            // タスク13: より目立つように表示し、アニメーションを追加
+            const alpha = 1 - (elapsed / 1000);
+            const pulse = Math.sin(elapsed / 100) * 0.3 + 0.7;
+            const x = hint.x * this.CELL_SIZE;
+            const y = hint.y * this.CELL_SIZE;
+            
             this.gameCtx.save();
-            this.gameCtx.strokeStyle = 'rgba(9, 105, 218, 0.5)';
-            this.gameCtx.lineWidth = 2;
-            this.gameCtx.setLineDash([4, 4]);
-            this.rotationHints.forEach(hint => {
-                const x = hint.x * this.CELL_SIZE;
-                const y = hint.y * this.CELL_SIZE;
-                this.gameCtx.strokeRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
-            });
-            this.gameCtx.setLineDash([]);
+            this.gameCtx.strokeStyle = `rgba(9, 105, 218, ${alpha * pulse})`;
+            this.gameCtx.lineWidth = 3;
+            this.gameCtx.setLineDash([6, 4]);
+            this.gameCtx.strokeRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
+            
+            // 内側のハイライト
+            this.gameCtx.fillStyle = `rgba(9, 105, 218, ${alpha * 0.2})`;
+            this.gameCtx.fillRect(x + 2, y + 2, this.CELL_SIZE - 4, this.CELL_SIZE - 4);
             this.gameCtx.restore();
-        }
+            
+            return true;
+        });
     }
 
     /**
