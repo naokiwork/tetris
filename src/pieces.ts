@@ -62,9 +62,19 @@ export function getPieceShape(type: PieceType, rotation: RotationState): PieceSh
  * 新しいピースを作成
  */
 export function createPiece(type: PieceType, x: number = 4, y: number = 0): Piece {
+    // ピースの出現位置を検証（画面内に収まるように調整）
+    const shape = getPieceShape(type, 0);
+    let minX = Math.min(...shape.map(p => p.x));
+    let maxX = Math.max(...shape.map(p => p.x));
+    const width = maxX - minX + 1;
+    
+    // ボード幅を考慮して中央に配置（Iピースの横長形状にも対応）
+    const BOARD_WIDTH = 10;
+    const adjustedX = Math.max(0, Math.min(BOARD_WIDTH - width, x));
+    
     return {
         type,
-        position: { x, y },
+        position: { x: adjustedX, y },
         rotation: 0,
         shape: getPieceShape(type, 0)
     };

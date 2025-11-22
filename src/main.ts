@@ -22,6 +22,10 @@ class TetrisApp {
         this.inputHandler = new InputHandler(this.game);
         this.inputHandler.setDebugToggleCallback(() => this.toggleDebugMode());
         this.renderer = new Renderer(this.game);
+        this.inputHandler.setRendererCallback((key: string) => {
+            // Rendererのキー入力フィードバック機能を呼び出し
+            this.renderer.setKeyPressFeedback(key);
+        });
         this.setupUI();
     }
 
@@ -51,12 +55,66 @@ class TetrisApp {
             });
         }
 
+        const statsBtn = document.getElementById('stats-btn');
+        if (statsBtn) {
+            statsBtn.addEventListener('click', () => {
+                this.showStatsModal();
+            });
+        }
+
+        const closeStatsBtn = document.getElementById('close-stats-btn');
+        if (closeStatsBtn) {
+            closeStatsBtn.addEventListener('click', () => {
+                this.hideStatsModal();
+            });
+        }
+
+        const rankingBtn = document.getElementById('ranking-btn');
+        if (rankingBtn) {
+            rankingBtn.addEventListener('click', () => {
+                this.showRankingModal();
+            });
+        }
+
+        const closeRankingBtn = document.getElementById('close-ranking-btn');
+        if (closeRankingBtn) {
+            closeRankingBtn.addEventListener('click', () => {
+                this.hideRankingModal();
+            });
+        }
+
         // ハイスコアの読み込みと表示
         this.loadHighScore();
         this.updateHighScoreDisplay();
 
-        // ゲーム開始
-        this.game.start();
+        // ゲーム開始（カウントダウンアニメーション付き）
+        this.startGameWithCountdown();
+    }
+
+    /**
+     * カウントダウンアニメーション付きでゲーム開始
+     */
+    private startGameWithCountdown(): void {
+        const countdownElement = document.createElement('div');
+        countdownElement.id = 'countdown';
+        countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10000;pointer-events:none;';
+        document.body.appendChild(countdownElement);
+
+        let count = 3;
+        const countdown = () => {
+            if (count > 0) {
+                countdownElement.textContent = count.toString();
+                count--;
+                setTimeout(countdown, 1000);
+            } else if (count === 0) {
+                countdownElement.textContent = 'GO!';
+                setTimeout(() => {
+                    countdownElement.remove();
+                    this.game.start();
+                }, 500);
+            }
+        };
+        countdown();
     }
 
     /**
@@ -77,6 +135,120 @@ class TetrisApp {
         if (modal) {
             modal.classList.add('hidden');
         }
+    }
+
+    /**
+     * 統計モーダルを表示
+     */
+    private showStatsModal(): void {
+        const modal = document.getElementById('stats-modal');
+        if (modal) {
+            const stats = this.loadGameStats();
+            const totalGamesEl = document.getElementById('total-games');
+            const totalTimeEl = document.getElementById('total-time');
+            const totalLinesEl = document.getElementById('total-lines');
+            const avgScoreEl = document.getElementById('avg-score');
+            const highestLevelEl = document.getElementById('highest-level');
+
+            if (totalGamesEl) totalGamesEl.textContent = stats.totalGames.toString();
+            if (totalTimeEl) totalTimeEl.textContent = Math.floor(stats.totalTime / 60).toString();
+            if (totalLinesEl) totalLinesEl.textContent = stats.totalLines.toString();
+            if (avgScoreEl) avgScoreEl.textContent = stats.totalGames > 0 ? Math.floor(stats.totalScore / stats.totalGames).toString() : '0';
+            if (highestLevelEl) highestLevelEl.textContent = stats.highestLevel.toString();
+
+            modal.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * 統計モーダルを非表示
+     */
+    private hideStatsModal(): void {
+        const modal = document.getElementById('stats-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * ランキングモーダルを表示
+     */
+    private showRankingModal(): void {
+        const modal = document.getElementById('ranking-modal');
+        if (modal) {
+            const rankingList = document.getElementById('ranking-list');
+            if (rankingList) {
+                const rankings = this.loadRankings();
+                rankingList.innerHTML = '';
+                rankings.slice(0, 10).forEach((entry, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = `${index + 1}. ${entry.name || 'Anonymous'}: ${entry.score.toString().padStart(6, '0')} (Level ${entry.level})`;
+                    rankingList.appendChild(li);
+                });
+            }
+            modal.classList.remove('hidden');
+        }
+    }
+
+    /**
+     * ランキングモーダルを非表示
+     */
+    private hideRankingModal(): void {
+        const modal = document.getElementById('ranking-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    /**
+     * ゲーム統計の読み込み
+     */
+    private loadGameStats(): { totalGames: number; totalTime: number; totalLines: number; totalScore: number; highestLevel: number } {
+        const saved = localStorage.getItem('tetris-stats');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        return { totalGames: 0, totalTime: 0, totalLines: 0, totalScore: 0, highestLevel: 0 };
+    }
+
+    /**
+     * ゲーム統計の保存
+     */
+    private saveGameStats(score: number, level: number, lines: number, playTime: number): void {
+        const stats = this.loadGameStats();
+        stats.totalGames++;
+        stats.totalTime += playTime;
+        stats.totalLines += lines;
+        stats.totalScore += score;
+        stats.highestLevel = Math.max(stats.highestLevel, level);
+        localStorage.setItem('tetris-stats', JSON.stringify(stats));
+    }
+
+    /**
+     * ランキングの読み込み
+     */
+    private loadRankings(): Array<{ name: string; score: number; level: number; date: string }> {
+        const saved = localStorage.getItem('tetris-rankings');
+        if (saved) {
+            return JSON.parse(saved).sort((a: any, b: any) => b.score - a.score);
+        }
+        return [];
+    }
+
+    /**
+     * ランキングの保存
+     */
+    private saveToRanking(score: number, level: number): void {
+        const rankings = this.loadRankings();
+        const name = prompt('Enter your name for the ranking:') || 'Anonymous';
+        rankings.push({
+            name,
+            score,
+            level,
+            date: new Date().toISOString()
+        });
+        rankings.sort((a, b) => b.score - a.score);
+        localStorage.setItem('tetris-rankings', JSON.stringify(rankings.slice(0, 10)));
     }
 
     /**
@@ -178,7 +350,14 @@ class TetrisApp {
             // ゲームオーバー処理
             if (this.game.getState() === GameState.GAME_OVER) {
                 const finalScore = this.game.getScoreSystem().getScore();
+                const finalLevel = this.game.getScoreSystem().getLevel();
+                const finalLines = this.game.getScoreSystem().getLines();
                 this.saveHighScore(finalScore);
+                // 統計とランキングに保存（簡易版：プレイ時間は0として記録）
+                this.saveGameStats(finalScore, finalLevel, finalLines, 0);
+                if (finalScore > 0) {
+                    this.saveToRanking(finalScore, finalLevel);
+                }
                 this.showGameOverModal();
             }
 
@@ -281,6 +460,10 @@ class TetrisApp {
         if (this.inputHandler) {
             this.inputHandler.cleanup();
         }
+        // メモリクリーンアップ：参照を削除
+        this.game = null as any;
+        this.inputHandler = null as any;
+        this.renderer = null as any;
     }
 }
 

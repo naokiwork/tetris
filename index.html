@@ -66,6 +66,12 @@
                     <span class="info-label">FPS:</span>
                     <span class="info-value" id="fps">60</span>
                 </div>
+                <div class="info-item">
+                    <button id="stats-btn" class="btn" style="margin-top:10px;">Stats</button>
+                </div>
+                <div class="info-item">
+                    <button id="ranking-btn" class="btn" style="margin-top:10px;">Ranking</button>
+                </div>
             </div>
         </main>
         
@@ -109,6 +115,30 @@
                     </ul>
                 </div>
                 <button id="close-help-btn" class="btn" style="margin-top:20px;">Close</button>
+            </div>
+        </div>
+        
+        <div id="stats-modal" class="modal hidden">
+            <div class="modal-content" style="max-width:500px;">
+                <h2>Game Statistics</h2>
+                <div id="stats-content" style="text-align:left;line-height:2;">
+                    <p>Total Games: <span id="total-games">0</span></p>
+                    <p>Total Play Time: <span id="total-time">0</span> minutes</p>
+                    <p>Total Lines Cleared: <span id="total-lines">0</span></p>
+                    <p>Average Score: <span id="avg-score">0</span></p>
+                    <p>Highest Level: <span id="highest-level">0</span></p>
+                </div>
+                <button id="close-stats-btn" class="btn" style="margin-top:20px;">Close</button>
+            </div>
+        </div>
+        
+        <div id="ranking-modal" class="modal hidden">
+            <div class="modal-content" style="max-width:500px;">
+                <h2>Top 10 Rankings</h2>
+                <div id="ranking-content" style="text-align:left;line-height:1.8;">
+                    <ol id="ranking-list"></ol>
+                </div>
+                <button id="close-ranking-btn" class="btn" style="margin-top:20px;">Close</button>
             </div>
         </div>
     </div>

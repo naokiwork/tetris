@@ -12,6 +12,7 @@ export class InputHandler {
     private keyDownHandler: ((e: KeyboardEvent) => void) | null = null;
     private keyUpHandler: ((e: KeyboardEvent) => void) | null = null;
     private debugToggleCallback: (() => void) | null = null;
+    private rendererCallback: ((key: string) => void) | null = null;
     
     private readonly REPEAT_DELAY = 150; // 初回リピートまでの遅延（ms）
     private readonly REPEAT_INTERVAL = 50; // リピート間隔（ms）
@@ -26,6 +27,13 @@ export class InputHandler {
      */
     setDebugToggleCallback(callback: () => void): void {
         this.debugToggleCallback = callback;
+    }
+
+    /**
+     * レンダラーコールバックを設定（キー入力フィードバック用）
+     */
+    setRendererCallback(callback: (key: string) => void): void {
+        this.rendererCallback = callback;
     }
 
     private setupEventListeners(): void {
@@ -82,6 +90,11 @@ export class InputHandler {
     }
 
     private handleKeyPress(key: string): void {
+        // キー入力フィードバックを設定（Rendererに通知）
+        if (this.rendererCallback) {
+            this.rendererCallback(key);
+        }
+        
         // 入力キューに追加（非同期処理のため）
         this.inputQueue.push(key);
         this.processInputQueue();
