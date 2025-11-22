@@ -95,29 +95,19 @@ class TetrisApp {
      * カウントダウンアニメーション付きでゲーム開始
      */
     private startGameWithCountdown(): void {
-        // カウントダウン中でもゲームを開始してピースを表示
+        // すぐにゲームを開始（カウントダウンは省略）
         this.game.start();
         
+        // オプション：短いカウントダウンを表示（0.3秒）
         const countdownElement = document.createElement('div');
         countdownElement.id = 'countdown';
         countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10000;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
+        countdownElement.textContent = 'GO!';
         document.body.appendChild(countdownElement);
-
-        let count = 3;
-        const countdown = () => {
-            if (count > 0) {
-                countdownElement.textContent = count.toString();
-                count--;
-                setTimeout(countdown, 1000);
-            } else if (count === 0) {
-                countdownElement.textContent = 'GO!';
-                setTimeout(() => {
-                    countdownElement.remove();
-                    // ゲームは既に開始されているので、カウントダウンを削除するだけ
-                }, 500);
-            }
-        };
-        countdown();
+        
+        setTimeout(() => {
+            countdownElement.remove();
+        }, 500);
     }
 
     /**
@@ -321,6 +311,11 @@ class TetrisApp {
      */
     private gameLoop(currentTime: number): void {
         try {
+            // 初回実行時の初期化
+            if (this.lastTime === 0) {
+                this.lastTime = currentTime;
+            }
+
             const deltaTime = currentTime - this.lastTime;
             // 異常に大きなdeltaTimeを無視（タブが非アクティブになった場合など）
             if (deltaTime > 1000) {
@@ -339,7 +334,7 @@ class TetrisApp {
             // ゲーム更新
             this.game.update(deltaTime);
 
-            // 描画
+            // 描画（常に実行）
             this.renderer.render(this.game);
 
             // FPS表示の更新
@@ -471,6 +466,14 @@ class TetrisApp {
 }
 
 // アプリケーションを開始
-const app = new TetrisApp();
-app.start();
+// DOMContentLoadedを待ってから開始
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const app = new TetrisApp();
+        app.start();
+    });
+} else {
+    const app = new TetrisApp();
+    app.start();
+}
 
