@@ -18,7 +18,13 @@ export class ScoreSystem {
         // レベル計算（10ラインごとにレベルアップ）
         const newLevel = Math.floor(this.lines / 10) + 1;
         if (newLevel > this.level) {
+            const oldLevel = this.level;
             this.level = newLevel;
+            // レベルアップ時の通知（タスク2）
+            const levelUpEvent = new CustomEvent('levelUp', {
+                detail: { oldLevel, newLevel }
+            });
+            window.dispatchEvent(levelUpEvent);
         }
 
         // スコア計算（整数演算に統一）
@@ -81,19 +87,35 @@ export class ScoreSystem {
     }
 
     /**
-     * レベルに応じた落下速度（ミリ秒）を取得
+     * レベルに応じた落下速度（ミリ秒）を取得（タスク11: 難易度対応）
+     * 後方互換性のため、引数なしでも動作
      */
-    getDropInterval(): number {
+    getDropInterval(difficulty?: 'easy' | 'normal' | 'hard' | 'expert'): number {
+        if (!difficulty) {
+            difficulty = 'normal';
+        }
+        
+        // 難易度係数
+        const difficultyMultiplier = {
+            'easy': 1.5,
+            'normal': 1.0,
+            'hard': 0.7,
+            'expert': 0.5
+        };
+        
+        const multiplier = difficultyMultiplier[difficulty];
+        
         // レベル1: 1000ms（1秒）, レベル10: 100ms, レベル20以降: 50ms
-        // 最初は見やすくするため、少し遅めに設定
+        let baseInterval: number;
         if (this.level >= 20) {
-            return 50;
+            baseInterval = 50;
+        } else if (this.level >= 10) {
+            baseInterval = 100;
+        } else {
+            baseInterval = Math.max(100, 1000 - (this.level - 1) * 100);
         }
-        if (this.level >= 10) {
-            return 100;
-        }
-        // レベル1-9: 1000msから段階的に減少
-        return Math.max(100, 1000 - (this.level - 1) * 100);
+        
+        return Math.max(30, Math.floor(baseInterval * multiplier));
     }
 
     /**

@@ -16,6 +16,12 @@ class TetrisApp {
     private fpsCounter: number = 0;
     private fpsLastTime: number = 0;
     private debugMode: boolean = false;
+    private isCountdown: boolean = false; // タスク16: カウントダウン中フラグ
+    // タスク9: パフォーマンス統計
+    private minFPS: number = 60;
+    private maxFPS: number = 60;
+    private frameDrops: number = 0;
+    private lastFrameDropTime: number = 0;
 
     constructor() {
         this.game = new Game();
@@ -36,8 +42,8 @@ class TetrisApp {
         const restartBtn = document.getElementById('restart-btn');
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
-                this.game.start();
                 this.hideGameOverModal();
+                this.startGameWithCountdown(); // タスク17: リスタート時もカウントダウン
             });
         }
 
@@ -92,22 +98,37 @@ class TetrisApp {
     }
 
     /**
-     * カウントダウンアニメーション付きでゲーム開始
+     * カウントダウンアニメーション付きでゲーム開始（タスク16: カウントダウン中は操作無効）
      */
     private startGameWithCountdown(): void {
-        // すぐにゲームを開始（カウントダウンは省略）
-        this.game.start();
+        // カウントダウン中フラグを設定
+        this.isCountdown = true;
+        this.inputHandler.setCountdownMode(true);
         
-        // オプション：短いカウントダウンを表示（0.3秒）
+        // ゲームはカウントダウン後に開始
         const countdownElement = document.createElement('div');
         countdownElement.id = 'countdown';
         countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10000;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
-        countdownElement.textContent = 'GO!';
-        document.body.appendChild(countdownElement);
         
-        setTimeout(() => {
-            countdownElement.remove();
-        }, 500);
+        let count = 3;
+        const countdown = () => {
+            if (count > 0) {
+                countdownElement.textContent = count.toString();
+                count--;
+                setTimeout(countdown, 1000);
+            } else {
+                countdownElement.textContent = 'GO!';
+                // カウントダウン完了後にゲーム開始
+                this.game.start();
+                this.isCountdown = false;
+                this.inputHandler.setCountdownMode(false);
+                setTimeout(() => {
+                    countdownElement.remove();
+                }, 500);
+            }
+        };
+        countdown();
+        document.body.appendChild(countdownElement);
     }
 
     /**
@@ -205,16 +226,30 @@ class TetrisApp {
     }
 
     /**
-     * ゲーム統計の保存
+     * ゲーム統計の保存（タスク20: 整合性確保）
      */
     private saveGameStats(score: number, level: number, lines: number, playTime: number): void {
-        const stats = this.loadGameStats();
-        stats.totalGames++;
-        stats.totalTime += playTime;
-        stats.totalLines += lines;
-        stats.totalScore += score;
-        stats.highestLevel = Math.max(stats.highestLevel, level);
-        localStorage.setItem('tetris-stats', JSON.stringify(stats));
+        try {
+            const stats = this.loadGameStats();
+            // データの整合性チェック
+            if (isNaN(score) || isNaN(level) || isNaN(lines) || isNaN(playTime)) {
+                console.error('Invalid stats data');
+                return;
+            }
+            if (score < 0 || level < 1 || lines < 0 || playTime < 0) {
+                console.error('Invalid stats values');
+                return;
+            }
+            
+            stats.totalGames++;
+            stats.totalTime += playTime;
+            stats.totalLines += lines;
+            stats.totalScore += score;
+            stats.highestLevel = Math.max(stats.highestLevel, level);
+            localStorage.setItem('tetris-stats', JSON.stringify(stats));
+        } catch (e) {
+            console.error('Failed to save game stats:', e);
+        }
     }
 
     /**
@@ -229,11 +264,18 @@ class TetrisApp {
     }
 
     /**
-     * ランキングの保存
+     * ランキングの保存（タスク19: 重複チェック追加）
      */
     private saveToRanking(score: number, level: number): void {
         const rankings = this.loadRankings();
         const name = prompt('Enter your name for the ranking:') || 'Anonymous';
+        
+        // 重複チェック: 同じスコアの場合は最新のもののみを保持
+        const existingIndex = rankings.findIndex(r => r.score === score && r.name === name);
+        if (existingIndex !== -1) {
+            rankings.splice(existingIndex, 1);
+        }
+        
         rankings.push({
             name,
             score,
@@ -275,7 +317,7 @@ class TetrisApp {
     }
 
     /**
-     * ゲームオーバーモーダルを表示
+     * ゲームオーバーモーダルを表示（タスク3: アニメーション追加）
      */
     private showGameOverModal(): void {
         const modal = document.getElementById('game-over-modal');
@@ -283,7 +325,13 @@ class TetrisApp {
         const finalHighScoreElement = document.getElementById('final-high-score');
         
         if (modal) {
+            // フェードアウトアニメーション
+            modal.style.opacity = '0';
             modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                modal.style.transition = 'opacity 0.5s ease-in';
+                modal.style.opacity = '1';
+            });
         }
         
         if (finalScoreElement) {
@@ -357,6 +405,15 @@ class TetrisApp {
                     this.saveToRanking(finalScore, finalLevel);
                 }
                 this.showGameOverModal();
+                
+                // タスク15: オートリプレイ機能（設定で有効な場合）
+                const settings = (window as any).tetrisSettings || { autoReplay: false };
+                if (settings.autoReplay) {
+                    setTimeout(() => {
+                        this.hideGameOverModal();
+                        this.startGameWithCountdown();
+                    }, 3000);
+                }
             }
 
             // 次のフレーム
@@ -393,6 +450,29 @@ class TetrisApp {
         if (fpsElement) {
             fpsElement.textContent = String(this.fps);
         }
+    }
+
+    /**
+     * タスク9: パフォーマンス統計の更新
+     */
+    private updatePerformanceStats(deltaTime: number): void {
+        const currentFPS = 1000 / deltaTime;
+        this.minFPS = Math.min(this.minFPS, currentFPS);
+        this.maxFPS = Math.max(this.maxFPS, currentFPS);
+        
+        // フレームドロップ検出（60FPS未満）
+        if (currentFPS < 60 && Date.now() - this.lastFrameDropTime > 1000) {
+            this.frameDrops++;
+            this.lastFrameDropTime = Date.now();
+        }
+        
+        // グローバルに保存（デバッグ用）
+        (window as any).tetrisPerformanceStats = {
+            minFPS: this.minFPS,
+            maxFPS: this.maxFPS,
+            frameDrops: this.frameDrops,
+            currentFPS: this.fps
+        };
     }
 
     /**

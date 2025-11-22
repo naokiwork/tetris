@@ -13,6 +13,7 @@ export class InputHandler {
     private keyUpHandler: ((e: KeyboardEvent) => void) | null = null;
     private debugToggleCallback: (() => void) | null = null;
     private rendererCallback: ((key: string) => void) | null = null;
+    private isCountdownMode: boolean = false; // タスク16: カウントダウン中フラグ
     
     private readonly REPEAT_DELAY = 150; // 初回リピートまでの遅延（ms）
     private readonly REPEAT_INTERVAL = 50; // リピート間隔（ms）
@@ -34,6 +35,13 @@ export class InputHandler {
      */
     setRendererCallback(callback: (key: string) => void): void {
         this.rendererCallback = callback;
+    }
+
+    /**
+     * タスク16: カウントダウンモードを設定
+     */
+    setCountdownMode(enabled: boolean): void {
+        this.isCountdownMode = enabled;
     }
 
     private setupEventListeners(): void {

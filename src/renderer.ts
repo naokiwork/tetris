@@ -19,6 +19,8 @@ export class Renderer {
     private readonly GHOST_ALPHA = 0.3;
     private lineClearFlash: number = 0;
     private lastKeyPress: { key: string; time: number } | null = null;
+    private pieceLockFlash: { x: number; y: number; time: number }[] = []; // タスク1: ピース固定アニメーション
+    private levelUpNotification: { level: number; time: number } | null = null; // タスク2: レベルアップ通知
 
     constructor(game: Game) {
         // ゲームボードCanvas
@@ -47,6 +49,26 @@ export class Renderer {
         // ライン消去エフェクトのイベントリスナー
         window.addEventListener('lineClear', ((e: CustomEvent) => {
             this.lineClearFlash = 0.8;
+        }) as EventListener);
+
+        // タスク1: ピース固定時のアニメーション
+        window.addEventListener('pieceLocked', ((e: CustomEvent) => {
+            const piece = e.detail.piece;
+            piece.shape.forEach((block: { x: number; y: number }) => {
+                this.pieceLockFlash.push({
+                    x: piece.position.x + block.x,
+                    y: piece.position.y + block.y,
+                    time: Date.now()
+                });
+            });
+        }) as EventListener);
+
+        // タスク2: レベルアップ時の通知
+        window.addEventListener('levelUp', ((e: CustomEvent) => {
+            this.levelUpNotification = {
+                level: e.detail.newLevel,
+                time: Date.now()
+            };
         }) as EventListener);
     }
 
@@ -170,15 +192,47 @@ export class Renderer {
     }
 
     /**
-     * ホールドピースを描画
+     * ホールドピースを描画（タスク5: 視覚的強調）
      */
     private drawHoldPiece(game: Game): void {
         const pieceType = game.getHoldPieceType();
+        const canHold = game.canHoldPiece();
+        
+        // 背景をクリア
+        this.holdCtx.fillStyle = this.BG_COLOR;
+        this.holdCtx.fillRect(0, 0, this.holdCanvas.width, this.holdCanvas.height);
+
         if (!pieceType) {
+            // ホールド可能な場合、アニメーション枠を表示
+            if (canHold) {
+                const time = Date.now();
+                const pulse = Math.sin(time / 500) * 0.3 + 0.7;
+                this.holdCtx.strokeStyle = `rgba(9, 105, 218, ${pulse})`;
+                this.holdCtx.lineWidth = 2;
+                this.holdCtx.setLineDash([4, 4]);
+                this.holdCtx.strokeRect(5, 5, this.holdCanvas.width - 10, this.holdCanvas.height - 10);
+                this.holdCtx.setLineDash([]);
+            }
             return;
         }
 
         const shape = getPieceShape(pieceType, 0);
+        
+        // ホールド可能/不可能の状態を色で区別
+        if (canHold) {
+            // ホールド可能: アニメーション枠
+            const time = Date.now();
+            const pulse = Math.sin(time / 500) * 0.3 + 0.7;
+            this.holdCtx.strokeStyle = `rgba(9, 105, 218, ${pulse})`;
+            this.holdCtx.lineWidth = 3;
+            this.holdCtx.strokeRect(2, 2, this.holdCanvas.width - 4, this.holdCanvas.height - 4);
+        } else {
+            // ホールド不可能: グレーの枠
+            this.holdCtx.strokeStyle = '#656d76';
+            this.holdCtx.lineWidth = 2;
+            this.holdCtx.strokeRect(2, 2, this.holdCanvas.width - 4, this.holdCanvas.height - 4);
+        }
+
         this.drawPreviewPiece(this.holdCtx, shape, pieceType, this.holdCanvas.width, this.holdCanvas.height);
     }
 
@@ -357,6 +411,69 @@ export class Renderer {
             this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
             this.lineClearFlash = Math.max(0, this.lineClearFlash - 0.1);
         }
+    }
+
+    /**
+     * タスク1: ピース固定時のアニメーションを描画
+     */
+    private drawPieceLockAnimation(): void {
+        const now = Date.now();
+        this.pieceLockFlash = this.pieceLockFlash.filter(flash => {
+            const elapsed = now - flash.time;
+            if (elapsed > 500) return false; // 500msで消える
+
+            const alpha = 1 - (elapsed / 500);
+            const x = flash.x * this.CELL_SIZE;
+            const y = flash.y * this.CELL_SIZE;
+
+            // 点滅エフェクト
+            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+            this.gameCtx.fillRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
+
+            return true;
+        });
+    }
+
+    /**
+     * タスク2: レベルアップ通知を描画
+     */
+    private drawLevelUpNotification(): void {
+        if (!this.levelUpNotification) return;
+
+        const elapsed = Date.now() - this.levelUpNotification.time;
+        if (elapsed > 3000) {
+            this.levelUpNotification = null;
+            return;
+        }
+
+        const alpha = elapsed < 500 ? elapsed / 500 : (elapsed > 2500 ? (3000 - elapsed) / 500 : 1);
+        const fontSize = 80;
+        const text = `LEVEL ${this.levelUpNotification.level}!`;
+
+        this.gameCtx.save();
+        this.gameCtx.globalAlpha = alpha;
+        this.gameCtx.fillStyle = '#0969da';
+        this.gameCtx.font = `bold ${fontSize}px sans-serif`;
+        this.gameCtx.textAlign = 'center';
+        this.gameCtx.textBaseline = 'middle';
+        this.gameCtx.fillText(text, this.gameCanvas.width / 2, this.gameCanvas.height / 2);
+        this.gameCtx.restore();
+    }
+
+    /**
+     * タスク4: 落下速度の視覚的表示
+     */
+    private drawDropIntervalDisplay(game: Game): void {
+        // 難易度を取得（簡易実装）
+        const difficulty = (window as any).tetrisSettings?.difficulty || 'normal';
+        const dropInterval = game.getScoreSystem().getDropInterval(difficulty);
+        const x = 10;
+        const y = this.gameCanvas.height - 30;
+
+        this.gameCtx.fillStyle = '#8b949e';
+        this.gameCtx.font = '14px monospace';
+        this.gameCtx.textAlign = 'left';
+        this.gameCtx.fillText(`Drop: ${dropInterval}ms`, x, y);
     }
 
     /**

@@ -22,6 +22,10 @@ export class Game {
     private lockDelay: number = 0;
     private lockDelayTime: number = 500; // 500ms
     private lastDropPosition: Position | null = null;
+    // タスク11: 難易度設定
+    private difficulty: 'easy' | 'normal' | 'hard' | 'expert' = 'normal';
+    // タスク12: ゲームモード
+    private gameMode: 'marathon' | 'sprint' | 'ultra' = 'marathon';
 
     constructor() {
         this.board = new Board();
@@ -31,14 +35,16 @@ export class Game {
     }
 
     /**
-     * ゲーム開始
+     * ゲーム開始（タスク17: 全ての状態を確実にリセット）
      */
     start(): void {
+        // 全ての状態を確実にリセット
         this.board.clear();
         this.scoreSystem.reset();
         this.bagSystem = new BagSystem();
         this.holdPieceType = null;
-        this.canHold = true; // ホールド機能の状態を確実にリセット
+        this.canHold = true;
+        this.currentPiece = null; // 現在のピースもリセット
         this.state = GameState.PLAYING;
         this.nextPieceType = this.bagSystem.getNext();
         this.dropTimer = 0;
@@ -248,6 +254,12 @@ export class Game {
             return;
         }
 
+        // ピース固定時のアニメーション（タスク1）
+        const lockEvent = new CustomEvent('pieceLocked', {
+            detail: { piece: this.currentPiece }
+        });
+        window.dispatchEvent(lockEvent);
+
         this.board.placePiece(this.currentPiece);
         const linesCleared = this.board.clearFullRows();
         if (linesCleared > 0) {
@@ -294,7 +306,7 @@ export class Game {
 
         // 自動落下（確実に動作するように）
         this.dropTimer += preciseDeltaTime;
-        const dropInterval = this.scoreSystem.getDropInterval();
+        const dropInterval = this.scoreSystem.getDropInterval(this.difficulty);
 
         if (this.dropTimer >= dropInterval) {
             this.dropTimer = 0;
@@ -344,6 +356,10 @@ export class Game {
 
     getHoldPieceType(): PieceType | null {
         return this.holdPieceType;
+    }
+
+    canHoldPiece(): boolean {
+        return this.canHold;
     }
 
     getState(): GameState {
