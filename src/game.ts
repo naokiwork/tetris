@@ -292,13 +292,29 @@ export class Game {
             this.resetLockDelay();
         }
 
-        // 自動落下
+        // 自動落下（確実に動作するように）
         this.dropTimer += preciseDeltaTime;
         const dropInterval = this.scoreSystem.getDropInterval();
 
         if (this.dropTimer >= dropInterval) {
             this.dropTimer = 0;
-            this.softDrop();
+            // 下に移動できるかチェック
+            const newPiece: Piece = {
+                ...this.currentPiece,
+                position: {
+                    x: this.currentPiece.position.x,
+                    y: this.currentPiece.position.y + 1
+                }
+            };
+
+            if (!this.board.hasCollision(newPiece)) {
+                // 下に移動可能
+                this.currentPiece = newPiece;
+                this.resetLockDelay();
+            } else {
+                // 下に移動できない場合は固定
+                this.lockPiece();
+            }
         }
     }
 

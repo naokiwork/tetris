@@ -13,7 +13,7 @@ export class Renderer {
     private holdCanvas: HTMLCanvasElement;
     private holdCtx: CanvasRenderingContext2D;
 
-    private readonly CELL_SIZE = 30;
+    private readonly CELL_SIZE = 40; // 30から40に拡大（約33%大きくなる）
     private readonly GRID_COLOR = '#3d4147'; // より明るいグリッド線
     private readonly BG_COLOR = '#1a1d23'; // 少し明るい背景色
     private readonly GHOST_ALPHA = 0.3;

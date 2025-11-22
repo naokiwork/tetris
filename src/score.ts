@@ -84,11 +84,16 @@ export class ScoreSystem {
      * レベルに応じた落下速度（ミリ秒）を取得
      */
     getDropInterval(): number {
-        // レベル1: 1000ms, レベル10: 100ms, レベル20以降: 50ms
+        // レベル1: 1000ms（1秒）, レベル10: 100ms, レベル20以降: 50ms
+        // 最初は見やすくするため、少し遅めに設定
         if (this.level >= 20) {
             return 50;
         }
-        return Math.max(50, 1000 - (this.level - 1) * 100);
+        if (this.level >= 10) {
+            return 100;
+        }
+        // レベル1-9: 1000msから段階的に減少
+        return Math.max(100, 1000 - (this.level - 1) * 100);
     }
 
     /**
