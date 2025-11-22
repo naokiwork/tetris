@@ -98,6 +98,16 @@ export class InputHandler {
     }
 
     private handleKeyPress(key: string): void {
+        // タスク63: 一時停止中のキー入力受付を無効化（デバッグキー除く）
+        if (this.game.getState() === 'PAUSED' && key !== 'D' && key !== 'd' && key !== 'p' && key !== 'P' && key !== 'Escape') {
+            return;
+        }
+
+        // タスク68: ライン消去中の操作を無効化
+        if ((window as any).tetrisRenderer?.isLineClearingActive?.()) {
+            return;
+        }
+
         // キー入力フィードバックを設定（Rendererに通知）
         if (this.rendererCallback) {
             this.rendererCallback(key);
