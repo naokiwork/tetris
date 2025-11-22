@@ -260,7 +260,13 @@ export class Game {
      * ゲーム更新（落下処理）
      */
     update(deltaTime: number): void {
-        if (this.state !== GameState.PLAYING || !this.currentPiece) {
+        if (this.state !== GameState.PLAYING) {
+            return;
+        }
+
+        // ピースがない場合は生成を試みる
+        if (!this.currentPiece) {
+            this.spawnPiece();
             return;
         }
 

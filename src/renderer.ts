@@ -126,9 +126,11 @@ export class Renderer {
     private drawCurrentPiece(game: Game): void {
         const piece = game.getCurrentPiece();
         if (!piece) {
+            // ピースがない場合は何も描画しない
             return;
         }
 
+        // ピースが確実に表示されるように描画
         this.drawPiece(this.gameCtx, piece, this.CELL_SIZE);
     }
 
@@ -224,10 +226,17 @@ export class Renderer {
         cellSize: number,
         isGhost: boolean = false
     ): void {
+        if (!piece || !piece.shape || piece.shape.length === 0) {
+            return;
+        }
+
         piece.shape.forEach(block => {
             const x = (piece.position.x + block.x) * cellSize;
             const y = (piece.position.y + block.y) * cellSize;
-            this.drawBlockAt(ctx, x, y, cellSize, piece.type, isGhost);
+            // 画面内かチェック
+            if (x >= 0 && x < this.gameCanvas.width && y >= 0 && y < this.gameCanvas.height) {
+                this.drawBlockAt(ctx, x, y, cellSize, piece.type, isGhost);
+            }
         });
     }
 
