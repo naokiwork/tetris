@@ -426,16 +426,22 @@
                     const checkX = newX + cell.x;
                     const checkY = newY + cell.y;
                     
-                    // 壁との衝突チェック
-                    if (checkX < 0 || checkX >= BOARD_WIDTH || checkY < 0 || checkY >= BOARD_HEIGHT) {
+                    // 壁との衝突チェック（横方向のみ）
+                    if (checkX < 0 || checkX >= BOARD_WIDTH) {
                         return true;
                     }
                     
-                    // 配置済みブロックとの衝突チェック
-                    for (const placedBlock of placedBlocks) {
-                        for (const placedCell of placedBlock.shape) {
-                            if (placedBlock.x + placedCell.x === checkX && placedBlock.y + placedCell.y === checkY) {
-                                return true;
+                    // 画面内のセルのみ衝突チェック
+                    if (checkY >= 0 && checkY < BOARD_HEIGHT) {
+                        // 配置済みブロックとの衝突チェック
+                        for (const placedBlock of placedBlocks) {
+                            for (const placedCell of placedBlock.shape) {
+                                const placedX = placedBlock.x + placedCell.x;
+                                const placedY = placedBlock.y + placedCell.y;
+                                // 画面内の配置済みブロックとのみ衝突チェック
+                                if (placedY >= 0 && placedX === checkX && placedY === checkY) {
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -512,13 +518,19 @@
                             dropY += 1;
                         }
                         currentBlock.y = dropY;
-                        // 即座に固定
-                        placedBlocks.push({
-                            type: currentBlock.type,
-                            x: currentBlock.x,
-                            y: currentBlock.y,
-                            shape: [...currentBlock.shape] // コピーを作成
+                        // 即座に固定（画面内のセルのみ保存）
+                        const placedShape = currentBlock.shape.filter(cell => {
+                            const y = currentBlock.y + cell.y;
+                            return y >= 0 && y < BOARD_HEIGHT;
                         });
+                        if (placedShape.length > 0) {
+                            placedBlocks.push({
+                                type: currentBlock.type,
+                                x: currentBlock.x,
+                                y: currentBlock.y,
+                                shape: placedShape
+                            });
+                        }
                         // 完全に埋まっている行を消去
                         clearFullRows();
                         spawnBlock();
@@ -698,12 +710,19 @@
                     if (isBlockAtBottom() || hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                         // 一番下に到達したか、他のブロックと衝突したら、現在のブロックを配置済みブロックに追加
                         console.log('Block reached bottom or collision, placing block');
-                        placedBlocks.push({
-                            type: currentBlock.type,
-                            x: currentBlock.x,
-                            y: currentBlock.y,
-                            shape: [...currentBlock.shape] // コピーを作成
+                        // 画面内のセルのみ保存
+                        const placedShape = currentBlock.shape.filter(cell => {
+                            const y = currentBlock.y + cell.y;
+                            return y >= 0 && y < BOARD_HEIGHT;
                         });
+                        if (placedShape.length > 0) {
+                            placedBlocks.push({
+                                type: currentBlock.type,
+                                x: currentBlock.x,
+                                y: currentBlock.y,
+                                shape: placedShape
+                            });
+                        }
                         // 完全に埋まっている行を消去
                         clearFullRows();
                         
