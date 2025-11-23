@@ -67,7 +67,7 @@ body {
     gap: var(--spacing-unit);
     align-items: center;
     justify-content: space-between; /* Holdは上、操作説明は下に配置 */
-    height: 100%; /* ゲームボードの高さに合わせる */
+    height: 800px; /* ゲームボードの高さ（800px）に合わせる */
 }
 
 .panel-section {
@@ -83,7 +83,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    align-self: flex-start; /* 上端を揃える */
 }
 
 #next-canvas,
