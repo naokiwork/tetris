@@ -467,11 +467,22 @@ body {
     margin-bottom: 20px;
 }
 
+.final-score,
+.final-level,
+.final-lines {
+    font-size: 30px;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    margin: 10px 0;
+}
+
 .retry-message {
     font-size: 40px;
     font-weight: bold;
     color: #ffffff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    margin-top: 20px;
 }
 
 @media (max-width: 768px) {

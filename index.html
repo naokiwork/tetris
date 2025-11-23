@@ -323,7 +323,14 @@
                 // 4行（Tetris）: 800 * level
                 const baseScores = [0, 100, 300, 500, 800];
                 const baseScore = baseScores[linesCleared] || 0;
-                return baseScore * level;
+                
+                // コンボボーナス（連続でラインを消去した場合）
+                let comboBonus = 0;
+                if (combo > 0) {
+                    comboBonus = combo * 50 * level;
+                }
+                
+                return (baseScore * level) + comboBonus;
             }
             
             // レベル計算（ライン数に基づく）
@@ -657,12 +664,28 @@
                 
                 // スコアとライン数を更新
                 const linesCleared = fullRows.length;
+                const currentTime = performance.now();
+                
+                // コンボ判定（2秒以内に連続でラインを消去した場合）
+                if (currentTime - lastClearTime < COMBO_TIMEOUT && lastClearTime > 0) {
+                    combo++;
+                } else {
+                    combo = 0; // コンボリセット
+                }
+                lastClearTime = currentTime;
+                
                 lines += linesCleared;
                 score += calculateScore(linesCleared);
                 updateLevel();
                 updateScoreDisplay();
                 
-                console.log('Rows cleared:', linesCleared, 'Total lines:', lines, 'Score:', score, 'Level:', level);
+                // テトリス（4ライン同時消去）の特別表示
+                if (linesCleared === 4) {
+                    console.log('TETRIS!');
+                    // 将来的にエフェクトを追加可能
+                }
+                
+                console.log('Rows cleared:', linesCleared, 'Combo:', combo, 'Total lines:', lines, 'Score:', score, 'Level:', level);
             }
             
             // ブロックを回転させる（時計回り90度）
@@ -764,6 +787,32 @@
                         // ホールド
                         e.preventDefault();
                         holdCurrentBlock();
+                        break;
+                    case 'g':
+                    case 'G':
+                        // グリッド表示のトグル
+                        e.preventDefault();
+                        showGrid = !showGrid;
+                        break;
+                    case 'p':
+                    case 'P':
+                        // ポーズ/再開
+                        e.preventDefault();
+                        if (gameActive && !gameOver) {
+                            gameActive = !gameActive;
+                            if (gameActive) {
+                                lastTime = performance.now();
+                                gameLoop();
+                            }
+                        }
+                        break;
+                    case 'r':
+                    case 'R':
+                        // リスタート
+                        e.preventDefault();
+                        if (gameOver || !gameActive) {
+                            resetGame();
+                        }
                         break;
                     case ' ':
                     case 'Space':
@@ -1071,6 +1120,8 @@
                 score = 0;
                 level = 1;
                 lines = 0;
+                combo = 0;
+                lastClearTime = 0;
                 window.currentDropInterval = DROP_INTERVAL_BASE;
                 updateScoreDisplay();
                 
