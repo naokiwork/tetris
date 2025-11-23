@@ -1,6 +1,7 @@
 import { Game } from './game';
 import { Piece, PieceType, Position, BOARD_WIDTH, BOARD_HEIGHT, PIECE_COLORS } from './types';
 import { getPieceShape } from './pieces';
+import { AudioSystem } from './audio';
 
 /**
  * 描画システム
@@ -36,8 +37,10 @@ export class Renderer {
     private gameOverAnimation: number = 0; // タスク6, 12, 20: ゲームオーバー時のアニメーション
     private rotationHints: { x: number; y: number; time: number }[] = []; // タスク5, 13: ピースの回転可能位置の表示（改善）
     private scoreMultiplierPulse: number = 0; // タスク14: スコア倍率表示のアニメーション
+    private audioSystem: AudioSystem; // 音響システム
 
     constructor(game: Game) {
+        this.audioSystem = new AudioSystem();
         // ゲームボードCanvas
         this.gameCanvas = document.getElementById('game-canvas') as HTMLCanvasElement;
         if (!this.gameCanvas) {
@@ -74,7 +77,7 @@ export class Renderer {
             this.lineClearFlash = 0.8;
         }) as EventListener);
 
-        // タスク1: ピース固定時のアニメーション
+        // タスク1, 14: ピース固定時のアニメーション
         window.addEventListener('pieceLocked', ((e: CustomEvent) => {
             const piece = e.detail.piece;
             piece.shape.forEach((block: { x: number; y: number }) => {
@@ -84,6 +87,8 @@ export class Renderer {
                     time: Date.now()
                 });
             });
+            // タスク14: ピース固定時のパーティクルエフェクト
+            this.triggerPieceLockParticles(piece);
         }) as EventListener);
 
         // タスク2: レベルアップ時の通知
@@ -94,6 +99,10 @@ export class Renderer {
             };
             // タスク14: スコア倍率表示のアニメーション
             this.scoreMultiplierPulse = 1.0;
+            // タスク15: レベルアップ時の画面エフェクト
+            this.triggerLevelUpScreenEffect();
+            // タスク2, 17: レベルアップ時の音響通知
+            this.audioSystem.playLevelUp();
         }) as EventListener);
 
         // タスク13: テトリスの特別エフェクト
@@ -118,7 +127,7 @@ export class Renderer {
             this.comboTime = Date.now();
         }) as EventListener);
 
-        // タスク1: ピース回転時の視覚的フィードバック
+        // タスク1, 19: ピース回転時の視覚的フィードバック
         window.addEventListener('pieceRotated', ((e: CustomEvent) => {
             const piece = e.detail.piece;
             piece.shape.forEach((block: { x: number; y: number }) => {
@@ -128,6 +137,10 @@ export class Renderer {
                     time: Date.now()
                 });
             });
+            // タスク19: 回転方向を示すアニメーション
+            if (e.detail.hints) {
+                this.triggerRotationDirectionAnimation(piece, e.detail.hints);
+            }
         }) as EventListener);
 
         // タスク2: ハードドロップ時のエフェクト
@@ -144,6 +157,34 @@ export class Renderer {
                     });
                 });
             }
+        }) as EventListener);
+
+        // タスク2, 13: ライン消去時のパーティクルエフェクト（色の多様化）
+        window.addEventListener('lineClearParticles', ((e: CustomEvent) => {
+            const lines = e.detail.lines;
+            // タスク13: ライン消去エフェクトの色の多様化
+            const colors = [
+                'rgba(255, 100, 100, 1)', // 赤
+                'rgba(100, 255, 100, 1)', // 緑
+                'rgba(100, 100, 255, 1)', // 青
+                'rgba(255, 255, 100, 1)', // 黄
+                'rgba(255, 100, 255, 1)', // マゼンタ
+                'rgba(100, 255, 255, 1)'  // シアン
+            ];
+            lines.forEach((line: number, lineIndex: number) => {
+                const color = colors[lineIndex % colors.length];
+                for (let x = 0; x < BOARD_WIDTH; x++) {
+                    this.lineClearParticles.push({
+                        x: x * this.CELL_SIZE + this.CELL_SIZE / 2,
+                        y: line * this.CELL_SIZE + this.CELL_SIZE / 2,
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: (Math.random() - 0.5) * 5,
+                        time: Date.now(),
+                        color: color,
+                        size: Math.random() * 4 + 2
+                    });
+                }
+            });
         }) as EventListener);
     }
 
@@ -540,8 +581,19 @@ export class Renderer {
                 const duration = 500;
                 if (elapsed < duration) {
                     const progress = elapsed / duration;
+                    // タスク20: スコア表示のアニメーション改善（強調表示）
+                    const scale = 1 + Math.sin(progress * Math.PI) * 0.1; // スケールアニメーション
                     const value = Math.floor(this.scoreAnimation.oldValue + (this.scoreAnimation.newValue - this.scoreAnimation.oldValue) * progress);
                     scoreElement.textContent = String(value).padStart(8, '0');
+                    // タスク20: スコアが増加した時に強調表示
+                    if (this.scoreAnimation.newValue > this.scoreAnimation.oldValue) {
+                        scoreElement.style.transform = `scale(${scale})`;
+                        scoreElement.style.color = '#0969da';
+                        setTimeout(() => {
+                            scoreElement.style.transform = '';
+                            scoreElement.style.color = '';
+                        }, duration);
+                    }
                 } else {
                     scoreElement.textContent = scoreSystem.formatScore();
                     this.scoreAnimation = null;
@@ -627,7 +679,7 @@ export class Renderer {
     }
 
     /**
-     * タスク1: ピース固定時のアニメーションを描画
+     * タスク1, 14: ピース固定時のアニメーションを描画（パーティクルエフェクト追加）
      */
     private drawPieceLockAnimation(): void {
         const now = Date.now();
@@ -639,6 +691,22 @@ export class Renderer {
             const x = flash.x * this.CELL_SIZE;
             const y = flash.y * this.CELL_SIZE;
 
+            // タスク14: ピース固定時のパーティクルエフェクト
+            if (elapsed < 100) {
+                // パーティクルを生成
+                for (let i = 0; i < 5; i++) {
+                    this.lineClearParticles.push({
+                        x: x + this.CELL_SIZE / 2,
+                        y: y + this.CELL_SIZE / 2,
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: (Math.random() - 0.5) * 5,
+                        time: now,
+                        color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                        size: Math.random() * 4 + 2
+                    });
+                }
+            }
+
             // 点滅エフェクト
             this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
             this.gameCtx.fillRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
@@ -648,7 +716,7 @@ export class Renderer {
     }
 
     /**
-     * タスク2, 19: レベルアップ通知を描画（強化）
+     * タスク2, 15, 19: レベルアップ通知を描画（強化・画面エフェクト追加）
      */
     private drawLevelUpNotification(): void {
         if (!this.levelUpNotification) return;
@@ -657,6 +725,13 @@ export class Renderer {
         if (elapsed > 3000) {
             this.levelUpNotification = null;
             return;
+        }
+
+        // タスク15: レベルアップ時の画面エフェクト
+        if (elapsed < 500) {
+            const flashAlpha = (1 - elapsed / 500) * 0.3;
+            this.gameCtx.fillStyle = `rgba(9, 105, 218, ${flashAlpha})`;
+            this.gameCtx.fillRect(0, 0, this.gameCanvas.width, this.gameCanvas.height);
         }
 
         const alpha = elapsed < 500 ? elapsed / 500 : (elapsed > 2500 ? (3000 - elapsed) / 500 : 1);
@@ -709,17 +784,22 @@ export class Renderer {
     }
 
     /**
-     * タスク13, 14: コンボ表示（強化）
+     * タスク13, 14, 16: コンボ表示（強化・アニメーション強化）
      */
     private drawComboDisplay(): void {
         if (this.comboCount > 0 && Date.now() - this.comboTime < 2000) {
             const elapsed = Date.now() - this.comboTime;
             const alpha = elapsed < 500 ? 1 : (elapsed > 1500 ? (2000 - elapsed) / 500 : 1);
+            // タスク16: コンボ表示のアニメーション強化
+            const pulse = Math.sin(Date.now() / 100) * 0.2 + 0.8;
             const scale = elapsed < 500 ? 1 + (elapsed / 500) * 0.3 : 1.3;
+            const rotation = Math.sin(Date.now() / 200) * 0.1; // 回転アニメーション
             
             this.gameCtx.save();
-            this.gameCtx.globalAlpha = alpha;
-            this.gameCtx.fillStyle = '#ffeb3b';
+            this.gameCtx.globalAlpha = alpha * pulse;
+            this.gameCtx.translate(this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
+            this.gameCtx.rotate(rotation);
+            this.gameCtx.fillStyle = `hsl(${(Date.now() / 20) % 360}, 100%, 60%)`; // 色が変化
             this.gameCtx.font = `bold ${48 * scale}px sans-serif`;
             this.gameCtx.textAlign = 'center';
             this.gameCtx.textBaseline = 'middle';
@@ -727,9 +807,9 @@ export class Renderer {
             if (this.comboCount >= 4) {
                 this.gameCtx.strokeStyle = '#ff0000';
                 this.gameCtx.lineWidth = 3;
-                this.gameCtx.strokeText(`TETRIS! ${this.comboCount} LINES!`, this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
+                this.gameCtx.strokeText(`TETRIS! ${this.comboCount} LINES!`, 0, 0);
             }
-            this.gameCtx.fillText(`${this.comboCount} LINES!`, this.gameCanvas.width / 2, this.gameCanvas.height / 2 - 50);
+            this.gameCtx.fillText(`${this.comboCount} LINES!`, 0, 0);
             this.gameCtx.restore();
         } else if (this.comboCount > 0) {
             this.comboCount = 0;
@@ -767,7 +847,7 @@ export class Renderer {
     }
 
     /**
-     * タスク1: ピース回転時の視覚的フィードバックを描画
+     * タスク1, 19: ピース回転時の視覚的フィードバックを描画（強化）
      */
     private drawRotationFlash(): void {
         const now = Date.now();
@@ -778,10 +858,19 @@ export class Renderer {
             const alpha = 1 - (elapsed / 300);
             const x = flash.x * this.CELL_SIZE;
             const y = flash.y * this.CELL_SIZE;
+            // タスク19: ピース回転時に回転方向を示すアニメーションを追加
+            const rotation = (elapsed / 300) * Math.PI * 2; // 回転アニメーション
+            const centerX = x + this.CELL_SIZE / 2;
+            const centerY = y + this.CELL_SIZE / 2;
 
-            // 光るエフェクト
-            this.gameCtx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.6})`;
+            // タスク19: 回転方向を示すアニメーション
+            this.gameCtx.save();
+            this.gameCtx.translate(centerX, centerY);
+            this.gameCtx.rotate(rotation);
+            this.gameCtx.translate(-centerX, -centerY);
+            this.gameCtx.fillStyle = `rgba(255, 255, 0, ${alpha * 0.8})`;
             this.gameCtx.fillRect(x, y, this.CELL_SIZE, this.CELL_SIZE);
+            this.gameCtx.restore();
 
             return true;
         });
@@ -958,6 +1047,60 @@ export class Renderer {
      */
     setKeyPressFeedback(key: string): void {
         this.lastKeyPress = { key, time: Date.now() };
+    }
+
+    /**
+     * タスク14: ピース固定時のパーティクルエフェクトをトリガー
+     */
+    private triggerPieceLockParticles(piece: Piece): void {
+        const now = Date.now();
+        piece.shape.forEach((block: { x: number; y: number }) => {
+            const x = (piece.position.x + block.x) * this.CELL_SIZE + this.CELL_SIZE / 2;
+            const y = (piece.position.y + block.y) * this.CELL_SIZE + this.CELL_SIZE / 2;
+            const color = PIECE_COLORS[piece.type] || '#ffffff';
+            
+            // パーティクルを生成
+            for (let i = 0; i < 5; i++) {
+                this.lineClearParticles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    time: now,
+                    color: color,
+                    size: Math.random() * 3 + 2
+                });
+            }
+        });
+    }
+
+    /**
+     * タスク15: レベルアップ時の画面エフェクトをトリガー
+     */
+    private triggerLevelUpScreenEffect(): void {
+        // レベルアップ時の画面エフェクトは既にdrawLevelUpNotificationで実装済み
+        // このメソッドは将来の拡張用に用意
+    }
+
+    /**
+     * タスク19: ピース回転時の回転方向を示すアニメーションをトリガー
+     */
+    private triggerRotationDirectionAnimation(piece: Piece, hints: { x: number; y: number }[]): void {
+        const now = Date.now();
+        hints.forEach(hint => {
+            this.rotationHints.push({
+                x: hint.x,
+                y: hint.y,
+                time: now
+            });
+        });
+    }
+
+    /**
+     * タスク6, 12, 20: ゲームオーバー時のアニメーションをトリガー
+     */
+    triggerGameOverAnimation(): void {
+        this.gameOverAnimation = 1.0;
     }
 }
 

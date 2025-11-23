@@ -2,6 +2,7 @@ import { Game } from './game';
 import { InputHandler } from './input';
 import { Renderer } from './renderer';
 import { GameState } from './types';
+import { AudioSystem } from './audio';
 
 /**
  * メインアプリケーション
@@ -10,6 +11,7 @@ class TetrisApp {
     private game: Game;
     private inputHandler: InputHandler;
     private renderer: Renderer;
+    private audioSystem: AudioSystem;
     private lastTime: number = 0;
     private animationFrameId: number | null = null;
     private fps: number = 0;
@@ -28,6 +30,7 @@ class TetrisApp {
         this.inputHandler = new InputHandler(this.game);
         this.inputHandler.setDebugToggleCallback(() => this.toggleDebugMode());
         this.renderer = new Renderer(this.game);
+        this.audioSystem = new AudioSystem();
         this.inputHandler.setRendererCallback((key: string) => {
             // Rendererのキー入力フィードバック機能を呼び出し
             this.renderer.setKeyPressFeedback(key);
@@ -140,10 +143,14 @@ class TetrisApp {
         const countdown = () => {
             if (count > 0) {
                 countdownElement.textContent = count.toString();
+                // タスク3: ゲーム開始時のカウントダウン音
+                this.audioSystem.playCountdown();
                 count--;
                 setTimeout(countdown, 1000);
             } else {
                 countdownElement.textContent = 'GO!';
+                // タスク3: ゲーム開始時のカウントダウン音（GO!）
+                this.audioSystem.playCountdown();
                 // カウントダウン完了後にゲーム開始
                 this.game.start();
                 this.isCountdown = false;
@@ -382,6 +389,10 @@ class TetrisApp {
             const highScore = this.loadHighScore();
             finalHighScoreElement.textContent = String(highScore).padStart(6, '0');
         }
+        // タスク18: ゲームオーバーエフェクトの音響追加
+        this.audioSystem.playGameOver();
+        // タスク6, 20: ゲームオーバー時のアニメーションをトリガー
+        this.renderer.triggerGameOverAnimation();
     }
 
     /**

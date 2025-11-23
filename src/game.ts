@@ -2,6 +2,7 @@ import { Board } from './board';
 import { Piece, PieceType, GameState, Position } from './types';
 import { createPiece, rotatePiece, BagSystem } from './pieces';
 import { ScoreSystem } from './score';
+import { AudioSystem } from './audio';
 
 // タスク68: ライン消去中の操作無効化用のグローバルフラグ
 declare global {
@@ -20,6 +21,7 @@ export class Game {
     private board: Board;
     private scoreSystem: ScoreSystem;
     private bagSystem: BagSystem;
+    private audioSystem: AudioSystem;
     
     private currentPiece: Piece | null = null;
     private nextPieceType: PieceType;
@@ -41,6 +43,7 @@ export class Game {
         this.board = new Board();
         this.scoreSystem = new ScoreSystem();
         this.bagSystem = new BagSystem();
+        this.audioSystem = new AudioSystem();
         this.nextPieceType = this.bagSystem.getNext();
     }
 
@@ -194,6 +197,8 @@ export class Game {
                 }
             };
             this.scoreSystem.addHardDrop(dropDistance - 1);
+            // タスク7: ハードドロップ時の音響フィードバック
+            this.audioSystem.playHardDrop();
             // タスク62: ハードドロップ後はロック遅延をスキップして即座に固定
             this.lockDelay = this.lockDelayTime; // ロック遅延を最大にして即座に固定
             this.lockPiece();
@@ -217,6 +222,8 @@ export class Game {
                 detail: { piece: this.currentPiece, hints: rotationHints }
             });
             window.dispatchEvent(rotateEvent);
+            // タスク6: ピース回転時の音響フィードバック
+            this.audioSystem.playRotate();
             this.currentPiece = rotated;
             this.resetLockDelay();
             return true;
@@ -293,6 +300,8 @@ export class Game {
             detail: { piece: this.currentPiece }
         });
         window.dispatchEvent(lockEvent);
+        // タスク1, 11: ピース固定時の音響フィードバック
+        this.audioSystem.playPieceLock();
         
         // タスク78: ピース固定時のタイミングを正確に管理
         const lockTime = performance.now();
@@ -302,6 +311,8 @@ export class Game {
         const fullRows = this.board.getFullRows();
         const linesCleared = this.board.clearFullRows();
         if (linesCleared > 0) {
+            // タスク8: ライン消去時の音響フィードバック
+            this.audioSystem.playLineClear(linesCleared);
             // タスク2: ライン消去時のパーティクルエフェクト
             const particleEvent = new CustomEvent('lineClearParticles', {
                 detail: { lines: fullRows }
