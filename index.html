@@ -27,6 +27,23 @@
                     <div class="panel-section board-section">
                         <canvas id="game-canvas" width="400" height="800"></canvas>
                     </div>
+                    <div class="panel-section controls-section">
+                        <h2 class="panel-title">Controls</h2>
+                        <div class="controls-list">
+                            <div class="control-item">
+                                <span class="control-key">← →</span>
+                                <span class="control-desc">Move Left/Right</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">↓</span>
+                                <span class="control-desc">Soft Drop</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">Space</span>
+                                <span class="control-desc">Hard Drop</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
@@ -80,12 +97,12 @@
             countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
             document.body.appendChild(countdownElement);
             
-            // カウントダウン処理
+            // カウントダウン処理（2倍速）
             function showCountdown() {
                 if (countdown > 0) {
                     countdownElement.textContent = countdown.toString();
                     countdown--;
-                    setTimeout(showCountdown, 1000);
+                    setTimeout(showCountdown, 500); // 1秒から0.5秒に変更（2倍速）
                 } else {
                     countdownElement.textContent = 'START!';
                     setTimeout(() => {
@@ -95,7 +112,7 @@
                         spawnBlock();
                         // ゲームループ開始
                         gameLoop();
-                    }, 500);
+                    }, 250); // 0.5秒から0.25秒に変更（2倍速）
                 }
             }
             
@@ -114,6 +131,72 @@
                 // 2x2のブロックなので、y + 2がボードの高さに達したら
                 return currentBlock.y + 2 >= BOARD_HEIGHT;
             }
+            
+            // ブロックが他のブロックと衝突しているかチェック
+            function hasCollision(newX, newY) {
+                // 壁との衝突チェック
+                if (newX < 0 || newX + 2 > BOARD_WIDTH || newY < 0 || newY + 2 > BOARD_HEIGHT) {
+                    return true;
+                }
+                
+                // 配置済みブロックとの衝突チェック
+                for (let i = 0; i < 2; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        const checkX = newX + i;
+                        const checkY = newY + j;
+                        for (const placedBlock of placedBlocks) {
+                            for (let pi = 0; pi < 2; pi++) {
+                                for (let pj = 0; pj < 2; pj++) {
+                                    if (placedBlock.x + pi === checkX && placedBlock.y + pj === checkY) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+            
+            // キー入力処理
+            document.addEventListener('keydown', (e) => {
+                if (!gameActive || !currentBlock) return;
+                
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        // 左に移動
+                        if (!hasCollision(currentBlock.x - 1, currentBlock.y)) {
+                            currentBlock.x -= 1;
+                        }
+                        break;
+                    case 'ArrowRight':
+                        // 右に移動
+                        if (!hasCollision(currentBlock.x + 1, currentBlock.y)) {
+                            currentBlock.x += 1;
+                        }
+                        break;
+                    case 'ArrowDown':
+                        // ソフトドロップ（下に移動）
+                        if (!hasCollision(currentBlock.x, currentBlock.y + 1)) {
+                            currentBlock.y += 1;
+                            dropTimer = 0; // タイマーリセット
+                        }
+                        break;
+                    case ' ':
+                    case 'Space':
+                        // ハードドロップ（一気に下に落とす）
+                        e.preventDefault();
+                        let dropY = currentBlock.y;
+                        while (!hasCollision(currentBlock.x, dropY + 1) && dropY + 2 < BOARD_HEIGHT) {
+                            dropY += 1;
+                        }
+                        currentBlock.y = dropY;
+                        // 即座に固定
+                        placedBlocks.push({x: currentBlock.x, y: currentBlock.y});
+                        spawnBlock();
+                        break;
+                }
+            });
             
             // 背景を描画
             function drawBackground() {
@@ -164,9 +247,9 @@
                     dropTimer = 0;
                     
                     // ブロックを下に移動
-                    if (isBlockAtBottom()) {
-                        // 一番下に到達したら、現在のブロックを配置済みブロックに追加
-                        console.log('Block reached bottom, placing block');
+                    if (isBlockAtBottom() || hasCollision(currentBlock.x, currentBlock.y + 1)) {
+                        // 一番下に到達したか、他のブロックと衝突したら、現在のブロックを配置済みブロックに追加
+                        console.log('Block reached bottom or collision, placing block');
                         placedBlocks.push({x: currentBlock.x, y: currentBlock.y});
                         // 次のブロックを生成
                         spawnBlock();

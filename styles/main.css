@@ -54,6 +54,7 @@ body {
     justify-content: center;
     gap: var(--spacing-unit);
     flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 .panel-section {
@@ -92,6 +93,43 @@ body {
 
 .board-section {
     padding: var(--spacing-unit);
+}
+
+.controls-section {
+    min-width: 200px;
+    padding: var(--spacing-unit);
+}
+
+.controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing-unit) / 2);
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-unit);
+    padding: calc(var(--spacing-unit) / 2);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+.control-key {
+    background-color: var(--color-bg-tertiary);
+    color: #ffffff;
+    padding: calc(var(--spacing-unit) / 4) calc(var(--spacing-unit) / 2);
+    border-radius: 4px;
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: center;
+}
+
+.control-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
 }
 
 #game-canvas {
