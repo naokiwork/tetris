@@ -802,6 +802,9 @@
             
             // ゲームリセット
             function resetGame() {
+                // ゲームループを停止
+                stopGameLoop();
+                
                 currentBlock = null;
                 placedBlocks = [];
                 nextBlocks = [];
@@ -820,6 +823,9 @@
                     gameOverElement.classList.add('hidden');
                 }
                 
+                // 背景とグリッドを描画（クリア状態）
+                drawBackground();
+                
                 // カウントダウン要素を再作成
                 const existingCountdown = document.getElementById('countdown');
                 if (existingCountdown) {
@@ -836,6 +842,7 @@
             }
             
             // ゲームループ
+            let animationFrameId = null;
             function gameLoop() {
                 const currentTime = performance.now();
                 const deltaTime = currentTime - lastTime;
@@ -849,7 +856,15 @@
                 drawBlocks();
                 drawGameOver();
                 
-                requestAnimationFrame(gameLoop);
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+            
+            // ゲームループを停止
+            function stopGameLoop() {
+                if (animationFrameId !== null) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
             }
             
             // カウントダウン開始
