@@ -108,6 +108,8 @@
             
             const CELL_SIZE = 30;
             const blocks = [];
+            let lastSpawnTime = 0;
+            const SPAWN_INTERVAL = 800; // 新しいブロックを生成する間隔（ミリ秒）
             
             // 初期ブロックを生成
             function createBlock() {
@@ -116,7 +118,8 @@
                 const minX = Math.min(...shape.map(p => p.x));
                 const maxX = Math.max(...shape.map(p => p.x));
                 const width = maxX - minX + 1;
-                const startX = Math.random() * (titleCanvas.width / CELL_SIZE - width) + width / 2;
+                const maxWidth = Math.max(1, titleCanvas.width / CELL_SIZE - width);
+                const startX = Math.random() * maxWidth + width / 2;
                 
                 return {
                     type: type,
@@ -129,10 +132,10 @@
                 };
             }
             
-            // 10個のブロックを生成
-            for (let i = 0; i < 10; i++) {
+            // 初期ブロックを生成（画面全体に分散）
+            for (let i = 0; i < 15; i++) {
                 const block = createBlock();
-                block.y = -10 - i * 5; // 初期位置をずらす
+                block.y = -Math.random() * titleCanvas.height - 50; // 画面外のランダムな位置
                 blocks.push(block);
             }
             
@@ -165,33 +168,38 @@
             }
             
             // アニメーションループ
-            function animate() {
+            function animate(currentTime) {
                 if (titleScreen.classList.contains('hidden')) {
                     return; // タイトル画面が非表示の場合は停止
                 }
                 
                 // 背景をクリア（半透明にして残像効果）
-                titleCtx.fillStyle = 'rgba(13, 17, 23, 0.1)';
+                titleCtx.fillStyle = 'rgba(13, 17, 23, 0.15)';
                 titleCtx.fillRect(0, 0, titleCanvas.width, titleCanvas.height);
                 
+                // 定期的に新しいブロックを生成
+                if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                    const newBlock = createBlock();
+                    newBlock.y = -Math.max(...newBlock.shape.map(p => p.y)) * CELL_SIZE - 20;
+                    blocks.push(newBlock);
+                    lastSpawnTime = currentTime;
+                }
+                
                 // ブロックを更新・描画
-                blocks.forEach((block, index) => {
+                for (let i = blocks.length - 1; i >= 0; i--) {
+                    const block = blocks[i];
                     block.y += block.speed;
                     block.rotation += block.rotationSpeed;
                     
-                    // 画面下部に到達したら上から再生成
+                    // 画面下部に到達したら削除（新しいブロックが生成される）
                     const maxY = Math.max(...block.shape.map(p => p.y));
-                    if (block.y + maxY * CELL_SIZE > titleCanvas.height + 50) {
-                        const newBlock = createBlock();
-                        block.x = newBlock.x;
-                        block.y = -10;
-                        block.speed = newBlock.speed;
-                        block.type = newBlock.type;
-                        block.shape = newBlock.shape;
+                    if (block.y + maxY * CELL_SIZE > titleCanvas.height + 100) {
+                        blocks.splice(i, 1);
+                        continue;
                     }
                     
                     drawBlock(block);
-                });
+                }
                 
                 requestAnimationFrame(animate);
             }
@@ -202,7 +210,7 @@
                 titleCanvas.height = window.innerHeight;
             });
             
-            animate();
+            animate(performance.now());
         }
         
         // タイトル画面のアニメーションを初期化
