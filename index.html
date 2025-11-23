@@ -21,6 +21,10 @@
         <div class="container">
             <header class="header">
                 <h1 class="title">TETRIS</h1>
+                <div class="header-controls">
+                    <button id="fullscreen-btn" class="header-btn" title="Toggle Fullscreen">⛶</button>
+                    <button id="screenshot-btn" class="header-btn" title="Take Screenshot">📷</button>
+                </div>
             </header>
             
             <main class="game-container">
@@ -98,8 +102,22 @@
                             <span id="stats-max-lines" class="stats-value">0</span>
                         </div>
                         <button id="close-stats" class="close-stats-btn">Close</button>
+                        <button id="show-history-btn" class="show-history-btn">Show History</button>
+                        <button id="export-stats-btn" class="export-stats-btn">Export Stats</button>
+                        <input type="file" id="import-stats-input" accept=".json" style="display: none;">
+                        <button id="import-stats-btn" class="import-stats-btn">Import Stats</button>
+                    </div>
+                    <div class="history-panel" id="history-panel" style="display: none;">
+                        <h3 class="history-title">Game History</h3>
+                        <div id="history-list" class="history-list"></div>
+                        <button id="close-history" class="close-history-btn">Close</button>
                     </div>
                     <button id="show-stats-btn" class="show-stats-btn">Show Stats</button>
+                        <div class="game-controls">
+                            <label for="speed-control" class="speed-label">Game Speed:</label>
+                            <input type="range" id="speed-control" min="1" max="10" value="1" class="speed-slider">
+                            <span id="speed-value" class="speed-value">1</span>
+                        </div>
                     <canvas id="game-canvas" width="400" height="800"></canvas>
                 </div>
                     <div class="panel-section next-section">
@@ -422,6 +440,91 @@
                 document.getElementById('stats-max-lines').textContent = gameStats.maxLines;
             }
             
+            // ゲーム履歴の表示
+            function showGameHistory() {
+                const historyPanel = document.getElementById('history-panel');
+                const historyList = document.getElementById('history-list');
+                const statsPanel = document.getElementById('stats-panel');
+                const showStatsBtn = document.getElementById('show-stats-btn');
+                
+                if (historyPanel && historyList) {
+                    const gameHistory = JSON.parse(localStorage.getItem('tetrisGameHistory') || '[]');
+                    historyList.innerHTML = '';
+                    
+                    if (gameHistory.length === 0) {
+                        historyList.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary);">No game history yet.</p>';
+                    } else {
+                        gameHistory.slice().reverse().forEach((game, index) => {
+                            const historyItem = document.createElement('div');
+                            historyItem.className = 'history-item';
+                            const date = new Date(game.date);
+                            historyItem.innerHTML = `
+                                <div class="history-date">${date.toLocaleString()}</div>
+                                <div class="history-stats">
+                                    <span>Score: ${game.score.toLocaleString()}</span>
+                                    <span>Level: ${game.level}</span>
+                                    <span>Lines: ${game.lines}</span>
+                                    <span>Time: ${formatTime(game.playTime)}</span>
+                                </div>
+                            `;
+                            historyList.appendChild(historyItem);
+                        });
+                    }
+                    
+                    historyPanel.style.display = 'block';
+                    if (statsPanel) statsPanel.style.display = 'none';
+                    if (showStatsBtn) showStatsBtn.style.display = 'block';
+                }
+            }
+            
+            // 統計データのエクスポート
+            function exportStats() {
+                const data = {
+                    stats: gameStats,
+                    highScore: highScore,
+                    history: JSON.parse(localStorage.getItem('tetrisGameHistory') || '[]'),
+                    exportDate: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tetris-stats-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+            
+            // 統計データのインポート
+            function importStats(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.stats) {
+                            gameStats = data.stats;
+                            localStorage.setItem('tetrisTotalPlayTime', gameStats.totalPlayTime.toString());
+                            localStorage.setItem('tetrisTotalScore', gameStats.totalScore.toString());
+                            localStorage.setItem('tetrisTotalGames', gameStats.totalGames.toString());
+                            localStorage.setItem('tetrisMaxLevel', gameStats.maxLevel.toString());
+                            localStorage.setItem('tetrisMaxLines', gameStats.maxLines.toString());
+                        }
+                        if (data.highScore !== undefined) {
+                            highScore = data.highScore;
+                            localStorage.setItem('tetrisHighScore', highScore.toString());
+                        }
+                        if (data.history) {
+                            localStorage.setItem('tetrisGameHistory', JSON.stringify(data.history));
+                        }
+                        updateStatsDisplay();
+                        updateHighScoreDisplay();
+                        alert('Stats imported successfully!');
+                    } catch (err) {
+                        alert('Failed to import stats: ' + err.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
             // 時間をフォーマット
             function formatTime(seconds) {
                 const hours = Math.floor(seconds / 3600);
@@ -454,6 +557,84 @@
                     closeStatsBtn.addEventListener('click', () => {
                         statsPanel.style.display = 'none';
                         showStatsBtn.style.display = 'block';
+                    });
+                }
+                
+                // ゲーム履歴の表示
+                const showHistoryBtn = document.getElementById('show-history-btn');
+                const historyPanel = document.getElementById('history-panel');
+                const closeHistoryBtn = document.getElementById('close-history');
+                if (showHistoryBtn && historyPanel) {
+                    showHistoryBtn.addEventListener('click', () => {
+                        showGameHistory();
+                    });
+                }
+                if (closeHistoryBtn && historyPanel && showStatsBtn) {
+                    closeHistoryBtn.addEventListener('click', () => {
+                        historyPanel.style.display = 'none';
+                        showStatsBtn.style.display = 'block';
+                    });
+                }
+                
+                // 統計データのエクスポート/インポート
+                const exportStatsBtn = document.getElementById('export-stats-btn');
+                const importStatsBtn = document.getElementById('import-stats-btn');
+                const importStatsInput = document.getElementById('import-stats-input');
+                
+                if (exportStatsBtn) {
+                    exportStatsBtn.addEventListener('click', exportStats);
+                }
+                if (importStatsBtn && importStatsInput) {
+                    importStatsBtn.addEventListener('click', () => {
+                        importStatsInput.click();
+                    });
+                    importStatsInput.addEventListener('change', (e) => {
+                        if (e.target.files.length > 0) {
+                            importStats(e.target.files[0]);
+                        }
+                    });
+                }
+                
+                // フルスクリーンモード
+                const fullscreenBtn = document.getElementById('fullscreen-btn');
+                if (fullscreenBtn) {
+                    fullscreenBtn.addEventListener('click', () => {
+                        if (!document.fullscreenElement) {
+                            document.documentElement.requestFullscreen().catch(err => {
+                                console.log('Fullscreen error:', err);
+                            });
+                            fullscreenBtn.textContent = '⛶';
+                        } else {
+                            document.exitFullscreen();
+                            fullscreenBtn.textContent = '⛶';
+                        }
+                    });
+                }
+                
+                // スクリーンショット機能
+                const screenshotBtn = document.getElementById('screenshot-btn');
+                if (screenshotBtn) {
+                    screenshotBtn.addEventListener('click', () => {
+                        const canvas = document.getElementById('game-canvas');
+                        canvas.toBlob((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `tetris-${Date.now()}.png`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        });
+                    });
+                }
+                
+                // ゲーム速度の手動調整
+                const speedControl = document.getElementById('speed-control');
+                const speedValue = document.getElementById('speed-value');
+                if (speedControl && speedValue) {
+                    speedControl.value = manualSpeedLevel;
+                    speedValue.textContent = manualSpeedLevel;
+                    speedControl.addEventListener('input', (e) => {
+                        updateManualSpeed(parseInt(e.target.value, 10));
                     });
                 }
             });
@@ -1439,6 +1620,21 @@
                     localStorage.setItem('tetrisMaxLevel', gameStats.maxLevel.toString());
                     localStorage.setItem('tetrisMaxLines', gameStats.maxLines.toString());
                     
+                    // ゲーム履歴に追加
+                    const gameHistory = JSON.parse(localStorage.getItem('tetrisGameHistory') || '[]');
+                    gameHistory.push({
+                        score: score,
+                        level: level,
+                        lines: lines,
+                        playTime: playTime,
+                        date: new Date().toISOString()
+                    });
+                    // 最新100件のみ保持
+                    if (gameHistory.length > 100) {
+                        gameHistory.shift();
+                    }
+                    localStorage.setItem('tetrisGameHistory', JSON.stringify(gameHistory));
+                    
                     gameStartTime = null;
                 }
                 
@@ -1503,6 +1699,7 @@
                 softDropScore = 0;
                 lastClearTime = 0;
                 window.currentDropInterval = DROP_INTERVAL_BASE;
+                updateDropInterval(); // 手動速度設定を反映
                 
                 // ハイスコア表示を更新
                 updateHighScoreDisplay();
