@@ -4,24 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TETRIS</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        #game-canvas {
-            background-color: #2d3136;
-            border: 2px solid #8b949e;
-        }
-    </style>
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <canvas id="game-canvas" width="400" height="800"></canvas>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">TETRIS</h1>
+        </header>
+        
+        <main class="game-container">
+            <div class="game-panel">
+                <div class="panel-section board-section">
+                    <canvas id="game-canvas" width="400" height="800"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+    
     <script>
         // シンプルなデバッグ用実装：黄色いブロックを表示
         const canvas = document.getElementById('game-canvas');
@@ -31,9 +30,16 @@
         const BLOCK_X = 4; // 中央付近のX座標
         const BLOCK_Y = 5; // 中央付近のY座標
         const YELLOW_COLOR = '#ffeb3b'; // 黄色
+        const BG_COLOR = '#2d3136'; // 背景色
         
         console.log('Canvas initialized');
         console.log('Canvas size:', canvas.width, 'x', canvas.height);
+        
+        // 背景を描画
+        function drawBackground() {
+            ctx.fillStyle = BG_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         
         // 黄色いブロックを描画（2x2の正方形）
         function drawYellowBlock() {
@@ -61,15 +67,9 @@
             console.log('Yellow block drawn successfully');
         }
         
-        // 画面をクリア
-        function clearCanvas() {
-            ctx.fillStyle = '#2d3136';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        
         // 描画ループ
         function render() {
-            clearCanvas();
+            drawBackground();
             drawYellowBlock();
             requestAnimationFrame(render);
         }
