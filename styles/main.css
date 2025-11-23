@@ -57,6 +57,12 @@ body {
     align-items: flex-start;
 }
 
+.controls-panel-bottom {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: var(--spacing-unit);
+}
+
 .panel-section {
     background-color: var(--color-bg-primary);
     border: 1px solid var(--color-border);
@@ -72,7 +78,8 @@ body {
     align-items: center;
 }
 
-#next-canvas {
+#next-canvas,
+#hold-canvas {
     background-color: var(--color-bg-tertiary);
     border: 1px solid var(--color-border);
     border-radius: var(--border-radius);
