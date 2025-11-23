@@ -1239,8 +1239,12 @@
                 level = 1;
                 lines = 0;
                 combo = 0;
+                softDropScore = 0;
                 lastClearTime = 0;
                 window.currentDropInterval = DROP_INTERVAL_BASE;
+                
+                // ハイスコア表示を更新
+                updateHighScoreDisplay();
                 updateScoreDisplay();
                 
                 // ゲームオーバーオーバーレイを確実に非表示（削除する方が確実）
