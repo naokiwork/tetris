@@ -761,7 +761,7 @@
             
             // ゲームオーバー画面を描画
             function drawGameOver() {
-                const gameOverElement = document.getElementById('game-over-overlay');
+                let gameOverElement = document.getElementById('game-over-overlay');
                 
                 if (!gameOver) {
                     // ゲームオーバー要素を非表示
@@ -772,23 +772,23 @@
                 }
                 
                 // ゲームオーバー要素を表示
-                if (!element) {
+                if (!gameOverElement) {
                     // ゲームオーバーオーバーレイを作成
-                    element = document.createElement('div');
-                    element.id = 'game-over-overlay';
-                    element.innerHTML = `
+                    gameOverElement = document.createElement('div');
+                    gameOverElement.id = 'game-over-overlay';
+                    gameOverElement.innerHTML = `
                         <div class="game-over-content">
                             <div id="game-over-text" class="game-over-text">Game Over</div>
                             <div id="retry-message" class="retry-message hidden">Press Enter To Retry</div>
                         </div>
                     `;
-                    document.getElementById('game-screen').appendChild(element);
+                    document.getElementById('game-screen').appendChild(gameOverElement);
                 }
                 
-                element.classList.remove('hidden');
+                gameOverElement.classList.remove('hidden');
                 
                 // リトライメッセージの表示/非表示
-                const retryMessage = element.querySelector('#retry-message');
+                const retryMessage = gameOverElement.querySelector('#retry-message');
                 if (retryMessage) {
                     if (showRetryMessage) {
                         retryMessage.classList.remove('hidden');
