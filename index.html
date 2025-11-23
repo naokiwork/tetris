@@ -183,6 +183,79 @@
                 return currentBlock.y + maxY >= BOARD_HEIGHT - 1;
             }
             
+            // 完全に埋まっている行を検出
+            function getFullRows() {
+                // 各行にブロックがあるかチェック
+                const rowCells = Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(false));
+                
+                // 配置済みブロックの各セルをマーク
+                placedBlocks.forEach(block => {
+                    block.shape.forEach(cell => {
+                        const x = block.x + cell.x;
+                        const y = block.y + cell.y;
+                        if (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT) {
+                            rowCells[y][x] = true;
+                        }
+                    });
+                });
+                
+                // 完全に埋まっている行を検出
+                const fullRows = [];
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    if (rowCells[y].every(cell => cell === true)) {
+                        fullRows.push(y);
+                    }
+                }
+                
+                return fullRows;
+            }
+            
+            // 完全に埋まっている行を消去し、上のブロックを下に落とす
+            function clearFullRows() {
+                const fullRows = getFullRows();
+                if (fullRows.length === 0) return;
+                
+                console.log('Clearing full rows:', fullRows);
+                
+                // 消去する行を上から順に処理（下から消すとインデックスがずれるため）
+                fullRows.sort((a, b) => b - a);
+                
+                // 各消去行について、その行より上にあるブロックを1列下に落とす
+                fullRows.forEach(rowToClear => {
+                    // 消去する行のブロックを削除
+                    placedBlocks = placedBlocks.filter(block => {
+                        // このブロックが消去する行に含まれているかチェック
+                        const hasCellInRow = block.shape.some(cell => {
+                            const y = block.y + cell.y;
+                            return y === rowToClear;
+                        });
+                        
+                        if (hasCellInRow) {
+                            // 消去する行のセルを除外
+                            block.shape = block.shape.filter(cell => {
+                                const y = block.y + cell.y;
+                                return y !== rowToClear;
+                            });
+                            
+                            // ブロックにセルが残っているかチェック
+                            return block.shape.length > 0;
+                        }
+                        
+                        return true;
+                    });
+                    
+                    // 消去する行より上にあるブロックを1列下に落とす
+                    placedBlocks.forEach(block => {
+                        const minY = Math.min(...block.shape.map(cell => block.y + cell.y));
+                        if (minY < rowToClear) {
+                            block.y += 1;
+                        }
+                    });
+                });
+                
+                console.log('Rows cleared, remaining blocks:', placedBlocks.length);
+            }
+            
             // ブロックを回転させる（時計回り90度）
             function rotateClockwise(shape) {
                 return shape.map(cell => ({ x: -cell.y, y: cell.x }));
@@ -280,8 +353,10 @@
                             type: currentBlock.type,
                             x: currentBlock.x,
                             y: currentBlock.y,
-                            shape: currentBlock.shape
+                            shape: [...currentBlock.shape] // コピーを作成
                         });
+                        // 完全に埋まっている行を消去
+                        clearFullRows();
                         spawnBlock();
                         break;
                 }
@@ -343,8 +418,10 @@
                             type: currentBlock.type,
                             x: currentBlock.x,
                             y: currentBlock.y,
-                            shape: currentBlock.shape
+                            shape: [...currentBlock.shape] // コピーを作成
                         });
+                        // 完全に埋まっている行を消去
+                        clearFullRows();
                         // 次のブロックを生成
                         spawnBlock();
                     } else {
