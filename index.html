@@ -950,6 +950,8 @@
                         const rotatedLeft = rotateCounterClockwise(currentBlock.shape);
                         if (!hasCollision(currentBlock.x, currentBlock.y, rotatedLeft)) {
                             currentBlock.shape = rotatedLeft;
+                            // 回転時の視覚的フィードバック
+                            showRotationFeedback('left');
                         }
                         break;
                     case 'x':
@@ -959,6 +961,8 @@
                         const rotatedRight = rotateClockwise(currentBlock.shape);
                         if (!hasCollision(currentBlock.x, currentBlock.y, rotatedRight)) {
                             currentBlock.shape = rotatedRight;
+                            // 回転時の視覚的フィードバック
+                            showRotationFeedback('right');
                         }
                         break;
                     case 'c':
@@ -998,11 +1002,22 @@
                         // ハードドロップ（一気に下に落とす）
                         e.preventDefault();
                         let dropY = currentBlock.y;
+                        const startY = dropY;
+                        
+                        // ハードドロップ時の軌跡を表示
+                        const dropTrail = [];
                         while (!hasCollision(currentBlock.x, dropY + 1, currentBlock.shape)) {
                             const maxY = Math.max(...currentBlock.shape.map(p => p.y));
                             if (dropY + maxY >= BOARD_HEIGHT - 1) break;
                             dropY += 1;
+                            dropTrail.push(dropY);
                         }
+                        
+                        // 軌跡を描画（短時間）
+                        if (dropTrail.length > 0) {
+                            showHardDropTrail(dropTrail);
+                        }
+                        
                         currentBlock.y = dropY;
                         // 即座に固定（画面内のセルのみ保存）
                         const placedShape = currentBlock.shape.filter(cell => {
@@ -1206,6 +1221,25 @@
                     if (ghostPos && ghostPos.y !== currentBlock.y) {
                         const ghostColor = PIECE_COLORS[currentBlock.type];
                         drawBlock(ghostPos.x, ghostPos.y, currentBlock.shape, ghostColor, true);
+                    }
+                    
+                    // ハードドロップ時の軌跡を描画
+                    if (window.hardDropTrail && window.hardDropTrail.length > 0) {
+                        const trailColor = PIECE_COLORS[currentBlock.type];
+                        window.hardDropTrail.forEach(trailY => {
+                            ctx.save();
+                            ctx.globalAlpha = 0.3;
+                            currentBlock.shape.forEach(cell => {
+                                const y = trailY + cell.y;
+                                if (y >= 0 && y < BOARD_HEIGHT) {
+                                    const x = (currentBlock.x + cell.x) * CELL_SIZE;
+                                    const cellY = y * CELL_SIZE;
+                                    ctx.fillStyle = trailColor;
+                                    ctx.fillRect(x + 2, cellY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                                }
+                            });
+                            ctx.restore();
+                        });
                     }
                 }
                 
