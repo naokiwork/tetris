@@ -814,6 +814,12 @@
                 showRetryMessage = false;
                 countdown = 3;
                 
+                // ゲームオーバーオーバーレイを非表示
+                const gameOverElement = document.getElementById('game-over-overlay');
+                if (gameOverElement) {
+                    gameOverElement.classList.add('hidden');
+                }
+                
                 // カウントダウン要素を再作成
                 const existingCountdown = document.getElementById('countdown');
                 if (existingCountdown) {
