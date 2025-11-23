@@ -140,6 +140,8 @@
             let dropTimer = 0;
             let lastTime = performance.now();
             let gameActive = false;
+            let gameOver = false; // ゲームオーバー状態
+            let showRetryMessage = false; // リトライメッセージを表示するか
             
             // カウントダウン表示
             let countdown = 3;
@@ -325,6 +327,27 @@
                 return fullRows;
             }
             
+            // ゲームオーバー判定（真ん中4列の画面上部にブロックが積まれた場合）
+            function checkGameOver() {
+                // 真ん中4列は列2, 3, 4, 5（インデックス2, 3, 4, 5）
+                const centerColumns = [2, 3, 4, 5];
+                
+                // 配置済みブロックをチェック
+                for (const block of placedBlocks) {
+                    for (const cell of block.shape) {
+                        const x = block.x + cell.x;
+                        const y = block.y + cell.y;
+                        
+                        // 真ん中4列の画面上部（y < 0）にブロックがあるかチェック
+                        if (centerColumns.includes(x) && y < 0) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
             // 完全に埋まっている行を消去し、上のブロックを下に落とす
             function clearFullRows() {
                 const fullRows = getFullRows();
@@ -409,7 +432,14 @@
             
             // キー入力処理
             document.addEventListener('keydown', (e) => {
-                if (!gameActive || !currentBlock) return;
+                // ゲームオーバー時のEnterキー処理
+                if (gameOver && e.key === 'Enter') {
+                    e.preventDefault();
+                    resetGame();
+                    return;
+                }
+                
+                if (!gameActive || !currentBlock || gameOver) return;
                 
                 switch(e.key) {
                     case 'ArrowLeft':
@@ -640,7 +670,7 @@
             
             // ゲーム更新
             function update(deltaTime) {
-                if (!gameActive || !currentBlock) return;
+                if (!gameActive || !currentBlock || gameOver) return;
                 
                 dropTimer += deltaTime;
                 
@@ -659,6 +689,18 @@
                         });
                         // 完全に埋まっている行を消去
                         clearFullRows();
+                        
+                        // ゲームオーバー判定
+                        if (checkGameOver()) {
+                            gameOver = true;
+                            gameActive = false;
+                            // 1秒後にリトライメッセージを表示
+                            setTimeout(() => {
+                                showRetryMessage = true;
+                            }, 1000);
+                            return;
+                        }
+                        
                         // 次のブロックを生成
                         spawnBlock();
                     } else {
@@ -666,6 +708,69 @@
                         currentBlock.y += 1;
                     }
                 }
+            }
+            
+            // ゲームオーバー画面を描画
+            function drawGameOver() {
+                if (!gameOver) return;
+                
+                // 画面を暗くするオーバーレイ
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // ゲームオーバーテキスト（グラデーション）
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                
+                if (!showRetryMessage) {
+                    // "ゲームオーバー"をグラデーションで表示
+                    const gradient = ctx.createLinearGradient(centerX - 150, centerY - 50, centerX + 150, centerY + 50);
+                    gradient.addColorStop(0, '#f44336');
+                    gradient.addColorStop(0.5, '#ff9800');
+                    gradient.addColorStop(1, '#f44336');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.font = 'bold 80px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('ゲームオーバー', centerX, centerY);
+                } else {
+                    // "Press Enter To Retry"を表示
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 40px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('Press Enter To Retry', centerX, centerY);
+                }
+            }
+            
+            // ゲームリセット
+            function resetGame() {
+                currentBlock = null;
+                placedBlocks = [];
+                nextBlocks = [];
+                holdBlock = null;
+                canHold = true;
+                dropTimer = 0;
+                lastTime = performance.now();
+                gameActive = false;
+                gameOver = false;
+                showRetryMessage = false;
+                countdown = 3;
+                
+                // カウントダウン要素を再作成
+                const existingCountdown = document.getElementById('countdown');
+                if (existingCountdown) {
+                    existingCountdown.remove();
+                }
+                const canvasRect = canvas.getBoundingClientRect();
+                const canvasCenterX = canvasRect.left + canvasRect.width / 2;
+                const canvasCenterY = canvasRect.top + canvasRect.height / 2;
+                countdownElement.style.cssText = `position:fixed;top:${canvasCenterY}px;left:${canvasCenterX}px;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);`;
+                document.body.appendChild(countdownElement);
+                
+                // カウントダウン開始
+                showCountdown();
             }
             
             // ゲームループ
@@ -680,6 +785,7 @@
                 // 描画
                 drawBackground();
                 drawBlocks();
+                drawGameOver();
                 
                 requestAnimationFrame(gameLoop);
             }
