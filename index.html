@@ -199,7 +199,7 @@
                 }
             }
             
-            // ブロックを生成（上から）
+            // ブロックを生成（画面外から）
             function spawnBlock() {
                 // 次のブロックがなければ準備
                 if (nextBlocks.length === 0) {
@@ -224,10 +224,17 @@
                 const width = maxX - minX + 1;
                 const startX = Math.floor((BOARD_WIDTH - width) / 2) - minX;
                 
+                // ブロックの形状の最小y座標を計算
+                const minY = Math.min(...shape.map(p => p.y));
+                
+                // ブロック全体が画面外（y < 0）になるように初期位置を設定
+                // 最小y座標が-1になるように、初期yを-1 - minYに設定
+                const startY = -1 - minY;
+                
                 currentBlock = {
                     type: type,
                     x: startX,
-                    y: 0,  // 上から
+                    y: startY,  // 画面外から
                     shape: shape
                 };
                 canHold = true; // ホールドを再度可能にする
@@ -265,10 +272,15 @@
                     const width = maxX - minX + 1;
                     const startX = Math.floor((BOARD_WIDTH - width) / 2) - minX;
                     
+                    // ブロックの形状の最小y座標を計算
+                    const minY = Math.min(...shape.map(p => p.y));
+                    // ブロック全体が画面外（y < 0）になるように初期位置を設定
+                    const startY = -1 - minY;
+                    
                     currentBlock = {
                         type: type,
                         x: startX,
-                        y: 0,
+                        y: startY,
                         shape: shape
                     };
                 }
@@ -293,6 +305,7 @@
                 // 下に移動できる限り移動
                 while (!hasCollision(currentBlock.x, ghostY + 1, currentBlock.shape)) {
                     const maxY = Math.max(...currentBlock.shape.map(p => p.y));
+                    // 画面内の最下部に到達したら停止
                     if (ghostY + maxY >= BOARD_HEIGHT - 1) break;
                     ghostY += 1;
                 }
@@ -542,10 +555,14 @@
             
             // ブロックを描画
             function drawBlock(blockX, blockY, shape, color, isGhost = false) {
-                // ブロックの各セルを描画
+                // ブロックの各セルを描画（画面内のセルのみ）
                 for (const cell of shape) {
+                    const cellY = blockY + cell.y;
+                    // 画面内のセルのみ描画
+                    if (cellY < 0 || cellY >= BOARD_HEIGHT) continue;
+                    
                     const x = (blockX + cell.x) * CELL_SIZE;
-                    const y = (blockY + cell.y) * CELL_SIZE;
+                    const y = cellY * CELL_SIZE;
                     
                     if (isGhost) {
                         // ゴーストピースは薄く表示（アウトラインのみ）
