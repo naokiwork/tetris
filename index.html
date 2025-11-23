@@ -7,76 +7,105 @@
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">TETRIS</h1>
-        </header>
-        
-        <main class="game-container">
-            <div class="game-panel">
-                <div class="panel-section board-section">
-                    <canvas id="game-canvas" width="400" height="800"></canvas>
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="title-screen">
+        <div class="title-content">
+            <h1 class="title-main">TETRIS</h1>
+            <p class="title-subtitle">Press ENTER to Start</p>
+        </div>
+    </div>
+    
+    <!-- ゲーム画面 -->
+    <div id="game-screen" class="game-screen hidden">
+        <div class="container">
+            <header class="header">
+                <h1 class="title">TETRIS</h1>
+            </header>
+            
+            <main class="game-container">
+                <div class="game-panel">
+                    <div class="panel-section board-section">
+                        <canvas id="game-canvas" width="400" height="800"></canvas>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
     
     <script>
-        // シンプルなデバッグ用実装：黄色いブロックを表示
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
+        // タイトル画面とゲーム画面の要素を取得
+        const titleScreen = document.getElementById('title-screen');
+        const gameScreen = document.getElementById('game-screen');
+        let gameStarted = false;
         
-        const CELL_SIZE = 40;
-        const BLOCK_X = 4; // 中央付近のX座標
-        const BLOCK_Y = 5; // 中央付近のY座標
-        const YELLOW_COLOR = '#ffeb3b'; // 黄色
-        const BG_COLOR = '#2d3136'; // 背景色
+        // Enterキーでゲーム開始
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !gameStarted) {
+                console.log('Enter key pressed - starting game');
+                titleScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                gameStarted = true;
+                startGame();
+            }
+        });
         
-        console.log('Canvas initialized');
-        console.log('Canvas size:', canvas.width, 'x', canvas.height);
-        
-        // 背景を描画
-        function drawBackground() {
-            ctx.fillStyle = BG_COLOR;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-        
-        // 黄色いブロックを描画（2x2の正方形）
-        function drawYellowBlock() {
-            console.log('Drawing yellow block at:', BLOCK_X, BLOCK_Y);
+        // ゲーム開始
+        function startGame() {
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
             
-            // ブロックの各セルを描画
-            for (let i = 0; i < 2; i++) {
-                for (let j = 0; j < 2; j++) {
-                    const x = (BLOCK_X + i) * CELL_SIZE;
-                    const y = (BLOCK_Y + j) * CELL_SIZE;
-                    
-                    console.log('Drawing cell at:', x, y);
-                    
-                    // 黄色で塗りつぶし
-                    ctx.fillStyle = YELLOW_COLOR;
-                    ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                    
-                    // 白いアウトライン
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                }
+            const CELL_SIZE = 40;
+            const BLOCK_X = 4; // 中央付近のX座標
+            const BLOCK_Y = 5; // 中央付近のY座標
+            const YELLOW_COLOR = '#ffeb3b'; // 黄色
+            const BG_COLOR = '#2d3136'; // 背景色
+            
+            console.log('Canvas initialized');
+            console.log('Canvas size:', canvas.width, 'x', canvas.height);
+            
+            // 背景を描画
+            function drawBackground() {
+                ctx.fillStyle = BG_COLOR;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            console.log('Yellow block drawn successfully');
+            // 黄色いブロックを描画（2x2の正方形）
+            function drawYellowBlock() {
+                console.log('Drawing yellow block at:', BLOCK_X, BLOCK_Y);
+                
+                // ブロックの各セルを描画
+                for (let i = 0; i < 2; i++) {
+                    for (let j = 0; j < 2; j++) {
+                        const x = (BLOCK_X + i) * CELL_SIZE;
+                        const y = (BLOCK_Y + j) * CELL_SIZE;
+                        
+                        console.log('Drawing cell at:', x, y);
+                        
+                        // 黄色で塗りつぶし
+                        ctx.fillStyle = YELLOW_COLOR;
+                        ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                        
+                        // 白いアウトライン
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    }
+                }
+                
+                console.log('Yellow block drawn successfully');
+            }
+            
+            // 描画ループ
+            function render() {
+                drawBackground();
+                drawYellowBlock();
+                requestAnimationFrame(render);
+            }
+            
+            // 描画開始
+            console.log('Starting render loop');
+            render();
         }
-        
-        // 描画ループ
-        function render() {
-            drawBackground();
-            drawYellowBlock();
-            requestAnimationFrame(render);
-        }
-        
-        // 描画開始
-        console.log('Starting render loop');
-        render();
     </script>
 </body>
 </html>
