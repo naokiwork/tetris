@@ -70,13 +70,38 @@
                                 <span class="score-label">Level</span>
                                 <span id="level-value" class="score-value">1</span>
                             </div>
-                            <div class="score-item">
-                                <span class="score-label">Lines</span>
-                                <span id="lines-value" class="score-value">0</span>
-                            </div>
+                        <div class="score-item">
+                            <span class="score-label">Lines</span>
+                            <span id="lines-value" class="score-value">0</span>
                         </div>
-                        <canvas id="game-canvas" width="400" height="800"></canvas>
                     </div>
+                    <div class="stats-panel" id="stats-panel" style="display: none;">
+                        <h3 class="stats-title">Statistics</h3>
+                        <div class="stats-item">
+                            <span class="stats-label">Total Games:</span>
+                            <span id="stats-total-games" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Total Play Time:</span>
+                            <span id="stats-total-time" class="stats-value">0s</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Average Score:</span>
+                            <span id="stats-avg-score" class="stats-value">0</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Max Level:</span>
+                            <span id="stats-max-level" class="stats-value">1</span>
+                        </div>
+                        <div class="stats-item">
+                            <span class="stats-label">Max Lines:</span>
+                            <span id="stats-max-lines" class="stats-value">0</span>
+                        </div>
+                        <button id="close-stats" class="close-stats-btn">Close</button>
+                    </div>
+                    <button id="show-stats-btn" class="show-stats-btn">Show Stats</button>
+                    <canvas id="game-canvas" width="400" height="800"></canvas>
+                </div>
                     <div class="panel-section next-section">
                         <h2 class="panel-title">Next</h2>
                         <canvas id="next-canvas" width="120" height="600"></canvas>
@@ -385,6 +410,53 @@
                     highScoreElement.textContent = highScore.toLocaleString();
                 }
             }
+            
+            // 統計データの表示を更新
+            function updateStatsDisplay() {
+                document.getElementById('stats-total-games').textContent = gameStats.totalGames;
+                document.getElementById('stats-total-time').textContent = formatTime(gameStats.totalPlayTime);
+                document.getElementById('stats-avg-score').textContent = gameStats.totalGames > 0 
+                    ? Math.floor(gameStats.totalScore / gameStats.totalGames).toLocaleString() 
+                    : '0';
+                document.getElementById('stats-max-level').textContent = gameStats.maxLevel;
+                document.getElementById('stats-max-lines').textContent = gameStats.maxLines;
+            }
+            
+            // 時間をフォーマット
+            function formatTime(seconds) {
+                const hours = Math.floor(seconds / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+                if (hours > 0) {
+                    return `${hours}h ${minutes}m ${secs}s`;
+                } else if (minutes > 0) {
+                    return `${minutes}m ${secs}s`;
+                } else {
+                    return `${secs}s`;
+                }
+            }
+            
+            // 統計パネルの表示/非表示
+            document.addEventListener('DOMContentLoaded', () => {
+                const showStatsBtn = document.getElementById('show-stats-btn');
+                const statsPanel = document.getElementById('stats-panel');
+                const closeStatsBtn = document.getElementById('close-stats');
+                
+                if (showStatsBtn && statsPanel) {
+                    showStatsBtn.addEventListener('click', () => {
+                        updateStatsDisplay();
+                        statsPanel.style.display = 'block';
+                        showStatsBtn.style.display = 'none';
+                    });
+                }
+                
+                if (closeStatsBtn && statsPanel && showStatsBtn) {
+                    closeStatsBtn.addEventListener('click', () => {
+                        statsPanel.style.display = 'none';
+                        showStatsBtn.style.display = 'block';
+                    });
+                }
+            });
             
             // スコア計算（ライン消去時）
             function calculateScore(linesCleared) {
@@ -905,8 +977,15 @@
                 return false;
             }
             
-            // キー入力処理
-            document.addEventListener('keydown', (e) => {
+            // イベントリスナーの重複登録対策
+            let keydownHandler = null;
+            
+            // キー入力処理（重複登録を防ぐ）
+            function setupKeydownHandler() {
+                if (keydownHandler) {
+                    document.removeEventListener('keydown', keydownHandler);
+                }
+                keydownHandler = (e) => {
                 // ゲームオーバー時のEnterキー処理
                 if (gameOver && e.key === 'Enter') {
                     e.preventDefault();
@@ -1037,7 +1116,12 @@
                         spawnBlock();
                         break;
                 }
-            });
+                };
+                document.addEventListener('keydown', keydownHandler);
+            }
+            
+            // キー入力ハンドラーを設定
+            setupKeydownHandler();
             
             // 色の明度を調整する関数
             function adjustColorBrightness(hex, percent) {
@@ -1338,6 +1422,21 @@
                 }
                 
                 gameOverElement.classList.remove('hidden');
+                
+                // ゲームオーバー画面のアニメーション改善
+                const gameOverText = gameOverElement.querySelector('#game-over-text');
+                if (gameOverText) {
+                    gameOverText.style.animation = 'gameOverPulse 1.5s ease-in-out infinite';
+                }
+                
+                // リトライメッセージを遅延表示
+                setTimeout(() => {
+                    const retryMessage = gameOverElement.querySelector('#retry-message');
+                    if (retryMessage) {
+                        retryMessage.classList.remove('hidden');
+                        retryMessage.style.animation = 'blink 1.5s ease-in-out infinite';
+                    }
+                }, 1000);
                 
                 // 最終スコアを表示
                 const finalScoreValue = gameOverElement.querySelector('#final-score-value');
