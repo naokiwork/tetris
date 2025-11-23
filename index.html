@@ -74,16 +74,38 @@
             const CELL_SIZE = 40;
             const BOARD_WIDTH = 10;
             const BOARD_HEIGHT = 20;
-            const YELLOW_COLOR = '#ffeb3b'; // 黄色
             const BG_COLOR = '#2d3136'; // 背景色
             const DROP_INTERVAL = 500; // 落下間隔（ミリ秒）
+            
+            // テトリミノの種類と色
+            const PIECE_TYPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+            const PIECE_COLORS = {
+                'I': '#00f0ff',  // シアン
+                'O': '#ffeb3b',  // 黄色
+                'T': '#ba68c8',  // 紫
+                'S': '#4caf50',  // 緑
+                'Z': '#f44336',  // 赤
+                'J': '#2196f3',  // 青
+                'L': '#ff9800'   // オレンジ
+            };
+            
+            // テトリミノの形状（相対座標、中心を(0,0)とした相対位置）
+            const PIECE_SHAPES = {
+                'I': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}],
+                'O': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}],
+                'T': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}],
+                'S': [{x: -1, y: 1}, {x: 0, y: 1}, {x: 0, y: 0}, {x: 1, y: 0}],
+                'Z': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}],
+                'J': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: -1, y: 1}],
+                'L': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}]
+            };
             
             console.log('Canvas initialized');
             console.log('Canvas size:', canvas.width, 'x', canvas.height);
             
             // ゲーム状態
-            let currentBlock = null; // 現在のブロック {x, y}
-            let placedBlocks = []; // 落下したブロックの配列 [{x, y}, ...]
+            let currentBlock = null; // 現在のブロック {type, x, y, shape}
+            let placedBlocks = []; // 落下したブロックの配列 [{type, x, y, shape}, ...]
             let dropTimer = 0;
             let lastTime = performance.now();
             let gameActive = false;
@@ -116,41 +138,58 @@
                 }
             }
             
+            // ランダムにブロックタイプを選ぶ
+            function getRandomPieceType() {
+                return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+            }
+            
             // ブロックを生成（上から）
             function spawnBlock() {
+                const type = getRandomPieceType();
+                const shape = PIECE_SHAPES[type];
+                
+                // ブロックの幅を計算して中央に配置
+                const minX = Math.min(...shape.map(p => p.x));
+                const maxX = Math.max(...shape.map(p => p.x));
+                const width = maxX - minX + 1;
+                const startX = Math.floor((BOARD_WIDTH - width) / 2) - minX;
+                
                 currentBlock = {
-                    x: 4, // 中央
-                    y: 0  // 上から
+                    type: type,
+                    x: startX,
+                    y: 0,  // 上から
+                    shape: shape
                 };
-                console.log('Block spawned at:', currentBlock.x, currentBlock.y);
+                console.log('Block spawned:', type, 'at:', currentBlock.x, currentBlock.y);
             }
             
             // ブロックが一番下に到達したかチェック
             function isBlockAtBottom() {
                 if (!currentBlock) return false;
-                // 2x2のブロックなので、y + 2がボードの高さに達したら
-                return currentBlock.y + 2 >= BOARD_HEIGHT;
+                // ブロックの形状に応じて最下部をチェック
+                const maxY = Math.max(...currentBlock.shape.map(p => p.y));
+                return currentBlock.y + maxY >= BOARD_HEIGHT - 1;
             }
             
             // ブロックが他のブロックと衝突しているかチェック
-            function hasCollision(newX, newY) {
-                // 壁との衝突チェック
-                if (newX < 0 || newX + 2 > BOARD_WIDTH || newY < 0 || newY + 2 > BOARD_HEIGHT) {
-                    return true;
-                }
+            function hasCollision(newX, newY, shape) {
+                if (!shape) shape = currentBlock.shape;
                 
-                // 配置済みブロックとの衝突チェック
-                for (let i = 0; i < 2; i++) {
-                    for (let j = 0; j < 2; j++) {
-                        const checkX = newX + i;
-                        const checkY = newY + j;
-                        for (const placedBlock of placedBlocks) {
-                            for (let pi = 0; pi < 2; pi++) {
-                                for (let pj = 0; pj < 2; pj++) {
-                                    if (placedBlock.x + pi === checkX && placedBlock.y + pj === checkY) {
-                                        return true;
-                                    }
-                                }
+                // ブロックの各セルをチェック
+                for (const cell of shape) {
+                    const checkX = newX + cell.x;
+                    const checkY = newY + cell.y;
+                    
+                    // 壁との衝突チェック
+                    if (checkX < 0 || checkX >= BOARD_WIDTH || checkY < 0 || checkY >= BOARD_HEIGHT) {
+                        return true;
+                    }
+                    
+                    // 配置済みブロックとの衝突チェック
+                    for (const placedBlock of placedBlocks) {
+                        for (const placedCell of placedBlock.shape) {
+                            if (placedBlock.x + placedCell.x === checkX && placedBlock.y + placedCell.y === checkY) {
+                                return true;
                             }
                         }
                     }
@@ -165,19 +204,19 @@
                 switch(e.key) {
                     case 'ArrowLeft':
                         // 左に移動
-                        if (!hasCollision(currentBlock.x - 1, currentBlock.y)) {
+                        if (!hasCollision(currentBlock.x - 1, currentBlock.y, currentBlock.shape)) {
                             currentBlock.x -= 1;
                         }
                         break;
                     case 'ArrowRight':
                         // 右に移動
-                        if (!hasCollision(currentBlock.x + 1, currentBlock.y)) {
+                        if (!hasCollision(currentBlock.x + 1, currentBlock.y, currentBlock.shape)) {
                             currentBlock.x += 1;
                         }
                         break;
                     case 'ArrowDown':
                         // ソフトドロップ（下に移動）
-                        if (!hasCollision(currentBlock.x, currentBlock.y + 1)) {
+                        if (!hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                             currentBlock.y += 1;
                             dropTimer = 0; // タイマーリセット
                         }
@@ -187,12 +226,19 @@
                         // ハードドロップ（一気に下に落とす）
                         e.preventDefault();
                         let dropY = currentBlock.y;
-                        while (!hasCollision(currentBlock.x, dropY + 1) && dropY + 2 < BOARD_HEIGHT) {
+                        while (!hasCollision(currentBlock.x, dropY + 1, currentBlock.shape)) {
+                            const maxY = Math.max(...currentBlock.shape.map(p => p.y));
+                            if (dropY + maxY >= BOARD_HEIGHT - 1) break;
                             dropY += 1;
                         }
                         currentBlock.y = dropY;
                         // 即座に固定
-                        placedBlocks.push({x: currentBlock.x, y: currentBlock.y});
+                        placedBlocks.push({
+                            type: currentBlock.type,
+                            x: currentBlock.x,
+                            y: currentBlock.y,
+                            shape: currentBlock.shape
+                        });
                         spawnBlock();
                         break;
                 }
@@ -204,36 +250,36 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // ブロックを描画（2x2の正方形）
-            function drawBlock(blockX, blockY) {
+            // ブロックを描画
+            function drawBlock(blockX, blockY, shape, color) {
                 // ブロックの各セルを描画
-                for (let i = 0; i < 2; i++) {
-                    for (let j = 0; j < 2; j++) {
-                        const x = (blockX + i) * CELL_SIZE;
-                        const y = (blockY + j) * CELL_SIZE;
-                        
-                        // 黄色で塗りつぶし
-                        ctx.fillStyle = YELLOW_COLOR;
-                        ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                        
-                        // 白いアウトライン
-                        ctx.strokeStyle = '#ffffff';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                    }
+                for (const cell of shape) {
+                    const x = (blockX + cell.x) * CELL_SIZE;
+                    const y = (blockY + cell.y) * CELL_SIZE;
+                    
+                    // 色で塗りつぶし
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    
+                    // 白いアウトライン
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
                 }
             }
             
-            // 黄色いブロックを描画（現在のブロックと配置済みブロック）
-            function drawYellowBlocks() {
+            // ブロックを描画（現在のブロックと配置済みブロック）
+            function drawBlocks() {
                 // 現在のブロックを描画
                 if (currentBlock) {
-                    drawBlock(currentBlock.x, currentBlock.y);
+                    const color = PIECE_COLORS[currentBlock.type];
+                    drawBlock(currentBlock.x, currentBlock.y, currentBlock.shape, color);
                 }
                 
                 // 配置済みブロックを描画
                 placedBlocks.forEach(block => {
-                    drawBlock(block.x, block.y);
+                    const color = PIECE_COLORS[block.type];
+                    drawBlock(block.x, block.y, block.shape, color);
                 });
             }
             
@@ -247,10 +293,15 @@
                     dropTimer = 0;
                     
                     // ブロックを下に移動
-                    if (isBlockAtBottom() || hasCollision(currentBlock.x, currentBlock.y + 1)) {
+                    if (isBlockAtBottom() || hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                         // 一番下に到達したか、他のブロックと衝突したら、現在のブロックを配置済みブロックに追加
                         console.log('Block reached bottom or collision, placing block');
-                        placedBlocks.push({x: currentBlock.x, y: currentBlock.y});
+                        placedBlocks.push({
+                            type: currentBlock.type,
+                            x: currentBlock.x,
+                            y: currentBlock.y,
+                            shape: currentBlock.shape
+                        });
                         // 次のブロックを生成
                         spawnBlock();
                     } else {
@@ -271,7 +322,7 @@
                 
                 // 描画
                 drawBackground();
-                drawYellowBlocks();
+                drawBlocks();
                 
                 requestAnimationFrame(gameLoop);
             }
