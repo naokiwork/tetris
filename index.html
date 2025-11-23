@@ -63,6 +63,33 @@
             console.log('Canvas initialized');
             console.log('Canvas size:', canvas.width, 'x', canvas.height);
             
+            // カウントダウン表示
+            let countdown = 3;
+            let countdownActive = true;
+            
+            // カウントダウン要素を作成
+            const countdownElement = document.createElement('div');
+            countdownElement.id = 'countdown';
+            countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
+            document.body.appendChild(countdownElement);
+            
+            // カウントダウン処理
+            function showCountdown() {
+                if (countdown > 0) {
+                    countdownElement.textContent = countdown.toString();
+                    countdown--;
+                    setTimeout(showCountdown, 1000);
+                } else {
+                    countdownElement.textContent = 'START!';
+                    setTimeout(() => {
+                        countdownElement.remove();
+                        countdownActive = false;
+                        // カウントダウン終了後にゲーム描画を開始
+                        startGameRender();
+                    }, 500);
+                }
+            }
+            
             // 背景を描画
             function drawBackground() {
                 ctx.fillStyle = BG_COLOR;
@@ -95,16 +122,20 @@
                 console.log('Yellow block drawn successfully');
             }
             
-            // 描画ループ
-            function render() {
-                drawBackground();
-                drawYellowBlock();
-                requestAnimationFrame(render);
+            // ゲーム描画ループ（カウントダウン後に開始）
+            function startGameRender() {
+                function render() {
+                    drawBackground();
+                    drawYellowBlock();
+                    requestAnimationFrame(render);
+                }
+                
+                console.log('Starting render loop');
+                render();
             }
             
-            // 描画開始
-            console.log('Starting render loop');
-            render();
+            // カウントダウン開始
+            showCountdown();
         }
     </script>
 </body>
