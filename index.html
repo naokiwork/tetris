@@ -761,9 +761,10 @@
             
             // ゲームオーバー画面を描画
             function drawGameOver() {
+                const gameOverElement = document.getElementById('game-over-overlay');
+                
                 if (!gameOver) {
                     // ゲームオーバー要素を非表示
-                    const gameOverElement = document.getElementById('game-over-overlay');
                     if (gameOverElement) {
                         gameOverElement.classList.add('hidden');
                     }
@@ -771,28 +772,29 @@
                 }
                 
                 // ゲームオーバー要素を表示
-                let gameOverElement = document.getElementById('game-over-overlay');
-                if (!gameOverElement) {
+                if (!element) {
                     // ゲームオーバーオーバーレイを作成
-                    gameOverElement = document.createElement('div');
-                    gameOverElement.id = 'game-over-overlay';
-                    gameOverElement.innerHTML = `
+                    element = document.createElement('div');
+                    element.id = 'game-over-overlay';
+                    element.innerHTML = `
                         <div class="game-over-content">
                             <div id="game-over-text" class="game-over-text">Game Over</div>
                             <div id="retry-message" class="retry-message hidden">Press Enter To Retry</div>
                         </div>
                     `;
-                    document.getElementById('game-screen').appendChild(gameOverElement);
+                    document.getElementById('game-screen').appendChild(element);
                 }
                 
-                gameOverElement.classList.remove('hidden');
+                element.classList.remove('hidden');
                 
                 // リトライメッセージの表示/非表示
-                const retryMessage = document.getElementById('retry-message');
-                if (showRetryMessage) {
-                    retryMessage.classList.remove('hidden');
-                } else {
-                    retryMessage.classList.add('hidden');
+                const retryMessage = element.querySelector('#retry-message');
+                if (retryMessage) {
+                    if (showRetryMessage) {
+                        retryMessage.classList.remove('hidden');
+                    } else {
+                        retryMessage.classList.add('hidden');
+                    }
                 }
                 
                 // Canvas上にも暗いオーバーレイを描画
