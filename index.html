@@ -39,6 +39,14 @@
                                 <span class="control-desc">Soft Drop</span>
                             </div>
                             <div class="control-item">
+                                <span class="control-key">Z</span>
+                                <span class="control-desc">Rotate Left</span>
+                            </div>
+                            <div class="control-item">
+                                <span class="control-key">X</span>
+                                <span class="control-desc">Rotate Right</span>
+                            </div>
+                            <div class="control-item">
                                 <span class="control-key">Space</span>
                                 <span class="control-desc">Hard Drop</span>
                             </div>
@@ -171,6 +179,16 @@
                 return currentBlock.y + maxY >= BOARD_HEIGHT - 1;
             }
             
+            // ブロックを回転させる（時計回り90度）
+            function rotateClockwise(shape) {
+                return shape.map(cell => ({ x: -cell.y, y: cell.x }));
+            }
+            
+            // ブロックを回転させる（反時計回り90度）
+            function rotateCounterClockwise(shape) {
+                return shape.map(cell => ({ x: cell.y, y: -cell.x }));
+            }
+            
             // ブロックが他のブロックと衝突しているかチェック
             function hasCollision(newX, newY, shape) {
                 if (!shape) shape = currentBlock.shape;
@@ -219,6 +237,24 @@
                         if (!hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                             currentBlock.y += 1;
                             dropTimer = 0; // タイマーリセット
+                        }
+                        break;
+                    case 'z':
+                    case 'Z':
+                        // 左回転（反時計回り）
+                        e.preventDefault();
+                        const rotatedLeft = rotateCounterClockwise(currentBlock.shape);
+                        if (!hasCollision(currentBlock.x, currentBlock.y, rotatedLeft)) {
+                            currentBlock.shape = rotatedLeft;
+                        }
+                        break;
+                    case 'x':
+                    case 'X':
+                        // 右回転（時計回り）
+                        e.preventDefault();
+                        const rotatedRight = rotateClockwise(currentBlock.shape);
+                        if (!hasCollision(currentBlock.x, currentBlock.y, rotatedRight)) {
+                            currentBlock.shape = rotatedRight;
                         }
                         break;
                     case ' ':
