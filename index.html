@@ -61,6 +61,20 @@
                         </div>
                     </div>
                     <div class="panel-section board-section">
+                        <div class="score-panel">
+                            <div class="score-item">
+                                <span class="score-label">Score</span>
+                                <span id="score-value" class="score-value">0</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Level</span>
+                                <span id="level-value" class="score-value">1</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Lines</span>
+                                <span id="lines-value" class="score-value">0</span>
+                            </div>
+                        </div>
                         <canvas id="game-canvas" width="400" height="800"></canvas>
                     </div>
                     <div class="panel-section next-section">
@@ -285,6 +299,46 @@
             let gameActive = false;
             let gameOver = false; // ゲームオーバー状態
             let showRetryMessage = false; // リトライメッセージを表示するか
+            window.currentDropInterval = DROP_INTERVAL_BASE; // 現在の落下間隔
+            
+            // スコア、レベル、ライン数
+            let score = 0;
+            let level = 1;
+            let lines = 0;
+            const DROP_INTERVAL_BASE = 500; // 基本落下間隔（ミリ秒）
+            
+            // スコア・レベル・ライン数の表示を更新
+            function updateScoreDisplay() {
+                document.getElementById('score-value').textContent = score.toLocaleString();
+                document.getElementById('level-value').textContent = level;
+                document.getElementById('lines-value').textContent = lines;
+            }
+            
+            // スコア計算（ライン消去時）
+            function calculateScore(linesCleared) {
+                // テトリスの標準スコア計算
+                // 1行: 100 * level
+                // 2行: 300 * level
+                // 3行: 500 * level
+                // 4行（Tetris）: 800 * level
+                const baseScores = [0, 100, 300, 500, 800];
+                const baseScore = baseScores[linesCleared] || 0;
+                return baseScore * level;
+            }
+            
+            // レベル計算（ライン数に基づく）
+            function updateLevel() {
+                const newLevel = Math.floor(lines / 10) + 1;
+                if (newLevel !== level) {
+                    level = newLevel;
+                    // レベルが上がると落下速度が速くなる
+                    // レベル1: 500ms, レベル2: 450ms, ... レベル10: 50ms
+                    const newDropInterval = Math.max(50, DROP_INTERVAL_BASE - (level - 1) * 50);
+                    // グローバル変数として保持（update関数で使用）
+                    window.currentDropInterval = newDropInterval;
+                }
+            }
+            let showGrid = true; // グリッド表示フラグ
             
             // カウントダウン表示
             let countdown = 3;
@@ -601,7 +655,14 @@
                     }
                 });
                 
-                console.log('Rows cleared, remaining blocks:', placedBlocks.length);
+                // スコアとライン数を更新
+                const linesCleared = fullRows.length;
+                lines += linesCleared;
+                score += calculateScore(linesCleared);
+                updateLevel();
+                updateScoreDisplay();
+                
+                console.log('Rows cleared:', linesCleared, 'Total lines:', lines, 'Score:', score, 'Level:', level);
             }
             
             // ブロックを回転させる（時計回り90度）
@@ -900,7 +961,10 @@
                 
                 dropTimer += deltaTime;
                 
-                if (dropTimer >= DROP_INTERVAL) {
+                // 現在の落下間隔を使用（レベルに応じて変化）
+                const currentDropInterval = window.currentDropInterval || DROP_INTERVAL_BASE;
+                
+                if (dropTimer >= currentDropInterval) {
                     dropTimer = 0;
                     
                     // ブロックを下に移動
@@ -1002,6 +1066,11 @@
                 gameOver = false;
                 showRetryMessage = false;
                 countdown = 3;
+                score = 0;
+                level = 1;
+                lines = 0;
+                window.currentDropInterval = DROP_INTERVAL_BASE;
+                updateScoreDisplay();
                 
                 // ゲームオーバーオーバーレイを確実に非表示（削除する方が確実）
                 const gameOverElement = document.getElementById('game-over-overlay');
