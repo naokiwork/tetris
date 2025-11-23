@@ -587,6 +587,29 @@ body {
     }
 }
 
+@keyframes gameStartFlash {
+    0% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes gameOverPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
 @keyframes particleFade {
     0% {
         transform: translate(0, 0) scale(1);
