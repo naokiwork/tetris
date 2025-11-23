@@ -1423,6 +1423,25 @@
                 
                 gameOverElement.classList.remove('hidden');
                 
+                // 統計データを更新
+                if (gameStartTime) {
+                    const playTime = Math.floor((performance.now() - gameStartTime) / 1000);
+                    gameStats.totalPlayTime += playTime;
+                    gameStats.totalScore += score;
+                    gameStats.totalGames += 1;
+                    gameStats.maxLevel = Math.max(gameStats.maxLevel, level);
+                    gameStats.maxLines = Math.max(gameStats.maxLines, lines);
+                    
+                    // ローカルストレージに保存
+                    localStorage.setItem('tetrisTotalPlayTime', gameStats.totalPlayTime.toString());
+                    localStorage.setItem('tetrisTotalScore', gameStats.totalScore.toString());
+                    localStorage.setItem('tetrisTotalGames', gameStats.totalGames.toString());
+                    localStorage.setItem('tetrisMaxLevel', gameStats.maxLevel.toString());
+                    localStorage.setItem('tetrisMaxLines', gameStats.maxLines.toString());
+                    
+                    gameStartTime = null;
+                }
+                
                 // ゲームオーバー画面のアニメーション改善
                 const gameOverText = gameOverElement.querySelector('#game-over-text');
                 if (gameOverText) {
