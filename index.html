@@ -161,6 +161,12 @@
                 // カウントダウン中も背景とグリッドを描画
                 drawBackground();
                 
+                // ゲームオーバーオーバーレイが残っていないか確認して削除
+                const gameOverElement = document.getElementById('game-over-overlay');
+                if (gameOverElement) {
+                    gameOverElement.remove();
+                }
+                
                 if (countdown > 0) {
                     countdownElement.textContent = countdown.toString();
                     countdown--;
@@ -169,6 +175,11 @@
                     countdownElement.textContent = 'START!';
                     setTimeout(() => {
                         countdownElement.remove();
+                        // 念のためゲームオーバーオーバーレイを再度確認して削除
+                        const gameOverElement2 = document.getElementById('game-over-overlay');
+                        if (gameOverElement2) {
+                            gameOverElement2.remove();
+                        }
                         gameActive = true;
                         // 次のブロックを準備
                         prepareNextBlocks();
@@ -819,10 +830,10 @@
                 showRetryMessage = false;
                 countdown = 3;
                 
-                // ゲームオーバーオーバーレイを非表示
+                // ゲームオーバーオーバーレイを確実に非表示（削除する方が確実）
                 const gameOverElement = document.getElementById('game-over-overlay');
                 if (gameOverElement) {
-                    gameOverElement.classList.add('hidden');
+                    gameOverElement.remove();
                 }
                 
                 // 背景とグリッドを描画（クリア状態）
