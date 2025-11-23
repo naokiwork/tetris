@@ -559,40 +559,46 @@
                 
                 console.log('Clearing full rows:', fullRows);
                 
-                // 消去する行を上から順に処理（下から消すとインデックスがずれるため）
-                fullRows.sort((a, b) => b - a);
+                // 消去する行をセットとして保持（高速検索のため）
+                const fullRowsSet = new Set(fullRows);
                 
-                // 各消去行について、その行より上にあるブロックを1列下に落とす
-                fullRows.forEach(rowToClear => {
-                    // 消去する行のブロックを削除
-                    placedBlocks = placedBlocks.filter(block => {
-                        // このブロックが消去する行に含まれているかチェック
-                        const hasCellInRow = block.shape.some(cell => {
-                            const y = block.y + cell.y;
-                            return y === rowToClear;
-                        });
-                        
-                        if (hasCellInRow) {
-                            // 消去する行のセルを除外
-                            block.shape = block.shape.filter(cell => {
-                                const y = block.y + cell.y;
-                                return y !== rowToClear;
-                            });
-                            
-                            // ブロックにセルが残っているかチェック
-                            return block.shape.length > 0;
-                        }
-                        
-                        return true;
+                // すべてのブロックから消去する行のセルを一度に削除
+                placedBlocks = placedBlocks.map(block => {
+                    // 消去する行に含まれるセルを除外
+                    const filteredShape = block.shape.filter(cell => {
+                        const y = block.y + cell.y;
+                        return !fullRowsSet.has(y);
                     });
                     
-                    // 消去する行より上にあるブロックを1列下に落とす
-                    placedBlocks.forEach(block => {
+                    // セルが残っている場合のみブロックを保持
+                    if (filteredShape.length > 0) {
+                        return {
+                            ...block,
+                            shape: filteredShape
+                        };
+                    }
+                    return null;
+                }).filter(block => block !== null);
+                
+                // 消去した行より上にあるブロックを、消去した行数分だけ下に落とす
+                // 下から上に処理することで、複数行消去時も正しく動作
+                fullRows.sort((a, b) => b - a); // 下から上にソート
+                
+                placedBlocks.forEach(block => {
+                    // ブロックの最小y座標を計算
+                    if (block.shape.length > 0) {
                         const minY = Math.min(...block.shape.map(cell => block.y + cell.y));
-                        if (minY < rowToClear) {
-                            block.y += 1;
+                        // 消去した行より上にあるブロックを、消去した行数分だけ下に移動
+                        let dropCount = 0;
+                        for (const clearedRow of fullRows) {
+                            if (minY < clearedRow) {
+                                dropCount++;
+                            }
                         }
-                    });
+                        if (dropCount > 0) {
+                            block.y += dropCount;
+                        }
+                    }
                 });
                 
                 console.log('Rows cleared, remaining blocks:', placedBlocks.length);
