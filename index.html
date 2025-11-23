@@ -429,7 +429,7 @@
             const canvasRect = canvas.getBoundingClientRect();
             const canvasCenterX = canvasRect.left + canvasRect.width / 2;
             const canvasCenterY = canvasRect.top + canvasRect.height / 2;
-            countdownElement.style.cssText = `position:fixed;top:${canvasCenterY}px;left:${canvasCenterX}px;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);`;
+            countdownElement.style.cssText = `position:fixed;top:${canvasCenterY}px;left:${canvasCenterX}px;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:0 0 20px #0969da, 0 0 40px #0969da, 2px 2px 4px rgba(0,0,0,0.5);animation:countdownPulse 0.5s ease-out;`;
             document.body.appendChild(countdownElement);
             
             // カウントダウン処理（2倍速）
@@ -751,17 +751,89 @@
                 updateLevel();
                 updateScoreDisplay();
                 
+                // ライン消去数の表示
+                if (linesCleared > 0) {
+                    showLineClearEffect(linesCleared);
+                }
+                
                 // テトリス（4ライン同時消去）の特別表示
                 if (linesCleared === 4) {
                     console.log('TETRIS!');
                     // テトリス時の特別なエフェクトとメッセージを表示
                     showTetrisEffect();
                 }
+                
+                // コンボ表示
+                if (combo > 1) {
+                    showComboEffect(combo);
+                }
+            
+            // ライン消去エフェクト表示
+            function showLineClearEffect(linesCleared) {
+                const canvas = document.getElementById('game-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                const centerX = canvasRect.left + canvasRect.width / 2;
+                const centerY = canvasRect.top + canvasRect.height / 2;
+                
+                const lineClearElement = document.createElement('div');
+                lineClearElement.className = 'line-clear-effect';
+                lineClearElement.textContent = `${linesCleared} LINE${linesCleared > 1 ? 'S' : ''}!`;
+                lineClearElement.style.cssText = `
+                    position: fixed;
+                    top: ${centerY}px;
+                    left: ${centerX}px;
+                    transform: translate(-50%, -50%);
+                    font-size: 60px;
+                    font-weight: bold;
+                    color: #4caf50;
+                    text-shadow: 0 0 10px #4caf50, 0 0 20px #4caf50;
+                    z-index: 10002;
+                    pointer-events: none;
+                    animation: lineClearPulse 0.8s ease-out;
+                `;
+                document.body.appendChild(lineClearElement);
+                
+                setTimeout(() => {
+                    lineClearElement.remove();
+                }, 800);
+            }
+            
+            // コンボエフェクト表示
+            function showComboEffect(comboCount) {
+                const canvas = document.getElementById('game-canvas');
+                const canvasRect = canvas.getBoundingClientRect();
+                const centerX = canvasRect.left + canvasRect.width / 2;
+                const centerY = canvasRect.top + canvasRect.height / 2 - 100;
+                
+                const comboElement = document.createElement('div');
+                comboElement.className = 'combo-effect';
+                comboElement.textContent = `${comboCount}x COMBO!`;
+                comboElement.style.cssText = `
+                    position: fixed;
+                    top: ${centerY}px;
+                    left: ${centerX}px;
+                    transform: translate(-50%, -50%);
+                    font-size: 50px;
+                    font-weight: bold;
+                    color: #ff9800;
+                    text-shadow: 0 0 10px #ff9800, 0 0 20px #ff9800;
+                    z-index: 10002;
+                    pointer-events: none;
+                    animation: comboPulse 0.6s ease-out;
+                `;
+                document.body.appendChild(comboElement);
+                
+                setTimeout(() => {
+                    comboElement.remove();
+                }, 600);
+            }
             
             // テトリスエフェクト表示
             function showTetrisEffect() {
                 const canvas = document.getElementById('game-canvas');
-                const ctx = canvas.getContext('2d');
+                const canvasRect = canvas.getBoundingClientRect();
+                const centerX = canvasRect.left + canvasRect.width / 2;
+                const centerY = canvasRect.top + canvasRect.height / 2;
                 
                 // テトリスメッセージを表示
                 const tetrisElement = document.createElement('div');
@@ -769,8 +841,8 @@
                 tetrisElement.textContent = 'TETRIS!';
                 tetrisElement.style.cssText = `
                     position: fixed;
-                    top: 50%;
-                    left: 50%;
+                    top: ${centerY}px;
+                    left: ${centerX}px;
                     transform: translate(-50%, -50%);
                     font-size: 100px;
                     font-weight: bold;
@@ -952,11 +1024,25 @@
                 }
             });
             
+            // 色の明度を調整する関数
+            function adjustColorBrightness(hex, percent) {
+                const num = parseInt(hex.replace('#', ''), 16);
+                const r = Math.min(255, Math.max(0, (num >> 16) + percent));
+                const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + percent));
+                const b = Math.min(255, Math.max(0, (num & 0x0000FF) + percent));
+                return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+            
             // 背景を描画
             function drawBackground() {
                 // 背景色で塗りつぶし
                 ctx.fillStyle = BG_COLOR;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // ボードの境界線を強調
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
                 
                 // グリッド線を描画（showGridフラグがtrueの場合のみ）
                 if (showGrid) {
@@ -993,30 +1079,47 @@
                     const y = cellY * CELL_SIZE;
                     
                     if (isGhost) {
-                        // ゴーストピースは薄く表示（アウトラインのみ）
+                        // ゴーストピースは薄く表示（視認性向上）
                         ctx.strokeStyle = color;
-                        ctx.lineWidth = 2;
-                        ctx.setLineDash([4, 4]); // 点線
+                        ctx.lineWidth = 3; // 点線の太さを増加
+                        ctx.globalAlpha = 0.5; // 透明度を上げて視認性向上
+                        ctx.setLineDash([6, 4]); // 点線のパターンを調整
                         ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
                         ctx.setLineDash([]); // 点線をリセット
+                        ctx.globalAlpha = 1.0; // 透明度をリセット
                     } else {
                         // 通常のブロック
-                        // 色で塗りつぶし
-                        ctx.fillStyle = color;
+                        // グラデーション効果を追加
+                        const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
+                        gradient.addColorStop(0, color);
+                        gradient.addColorStop(1, adjustColorBrightness(color, -20));
+                        ctx.fillStyle = gradient;
                         ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                        
+                        // ドロップシャドウを追加
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+                        ctx.shadowBlur = 4;
+                        ctx.shadowOffsetX = 2;
+                        ctx.shadowOffsetY = 2;
                         
                         // 白いアウトライン
                         ctx.strokeStyle = '#ffffff';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                        
+                        // シャドウをリセット
+                        ctx.shadowColor = 'transparent';
+                        ctx.shadowBlur = 0;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
                     }
                 }
             }
             
             // Holdブロックを描画
             function drawHoldBlock() {
-                // 背景をクリア
-                holdCtx.fillStyle = BG_COLOR;
+                // 背景をクリア（背景色を少し明るくして視認性向上）
+                holdCtx.fillStyle = adjustColorBrightness(BG_COLOR, 10);
                 holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
                 
                 if (holdBlock) {
@@ -1032,13 +1135,16 @@
                     const centerX = (holdCanvas.width - blockWidth) / 2;
                     const centerY = (holdCanvas.height - blockHeight) / 2;
                     
-                    // ブロックの各セルを描画
+                    // ブロックの各セルを描画（グラデーション効果を追加）
                     holdBlock.shape.forEach(cell => {
                         const x = centerX + (cell.x - minX) * HOLD_CELL_SIZE;
                         const y = centerY + (cell.y - minY) * HOLD_CELL_SIZE;
                         
-                        // 色で塗りつぶし
-                        holdCtx.fillStyle = color;
+                        // グラデーション効果
+                        const gradient = holdCtx.createLinearGradient(x, y, x + HOLD_CELL_SIZE, y + HOLD_CELL_SIZE);
+                        gradient.addColorStop(0, color);
+                        gradient.addColorStop(1, adjustColorBrightness(color, -15));
+                        holdCtx.fillStyle = gradient;
                         holdCtx.fillRect(x + 1, y + 1, HOLD_CELL_SIZE - 2, HOLD_CELL_SIZE - 2);
                         
                         // 白いアウトライン
@@ -1051,8 +1157,8 @@
             
             // Nextブロックを描画
             function drawNextBlocks() {
-                // 背景をクリア
-                nextCtx.fillStyle = BG_COLOR;
+                // 背景をクリア（背景色を少し明るくして視認性向上）
+                nextCtx.fillStyle = adjustColorBrightness(BG_COLOR, 10);
                 nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
                 
                 // 各Nextブロックを描画（最大5つ）
@@ -1072,13 +1178,16 @@
                     const blockHeight2 = (maxY - minY + 1) * NEXT_CELL_SIZE;
                     const centerX = (nextCanvas.width - blockWidth) / 2;
                     
-                    // ブロックの各セルを描画
+                    // ブロックの各セルを描画（グラデーション効果を追加）
                     block.shape.forEach(cell => {
                         const x = centerX + (cell.x - minX) * NEXT_CELL_SIZE;
                         const cellY = y + (cell.y - minY) * NEXT_CELL_SIZE;
                         
-                        // 色で塗りつぶし
-                        nextCtx.fillStyle = color;
+                        // グラデーション効果
+                        const gradient = nextCtx.createLinearGradient(x, cellY, x + NEXT_CELL_SIZE, cellY + NEXT_CELL_SIZE);
+                        gradient.addColorStop(0, color);
+                        gradient.addColorStop(1, adjustColorBrightness(color, -15));
+                        nextCtx.fillStyle = gradient;
                         nextCtx.fillRect(x + 1, cellY + 1, NEXT_CELL_SIZE - 2, NEXT_CELL_SIZE - 2);
                         
                         // 白いアウトライン
