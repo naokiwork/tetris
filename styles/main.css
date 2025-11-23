@@ -64,8 +64,9 @@ body {
 .controls-panel-bottom {
     display: flex;
     justify-content: flex-start;
-    padding-left: var(--spacing-unit);
+    padding-left: 0;
     margin-top: calc(var(--spacing-unit) * -1);
+    width: 100%;
 }
 
 .panel-section {
