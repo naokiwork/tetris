@@ -587,6 +587,17 @@ body {
     }
 }
 
+@keyframes particleFade {
+    0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--end-x, 0), var(--end-y, 0)) scale(0);
+        opacity: 0;
+    }
+}
+
 .score-value {
     transition: transform 0.3s ease, color 0.3s ease;
 }
