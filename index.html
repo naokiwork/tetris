@@ -4,165 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TETRIS</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #game-canvas {
+            background-color: #2d3136;
+            border: 2px solid #8b949e;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="title">TETRIS</h1>
-        </header>
+    <canvas id="game-canvas" width="400" height="800"></canvas>
+    <script>
+        // シンプルなデバッグ用実装：黄色いブロックを表示
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
         
-        <!-- タイトル画面 -->
-        <div id="title-screen" class="title-screen">
-            <div class="title-content">
-                <h1 class="title-main">TETRIS</h1>
-                <p class="title-subtitle">Classic Tetris Game</p>
-                <button id="start-btn" class="start-btn">START</button>
-                <div class="title-info">
-                    <p>Press START to begin</p>
-                </div>
-            </div>
-        </div>
+        const CELL_SIZE = 40;
+        const BLOCK_X = 4; // 中央付近のX座標
+        const BLOCK_Y = 5; // 中央付近のY座標
+        const YELLOW_COLOR = '#ffeb3b'; // 黄色
         
-        <main class="game-container hidden">
-            <div class="game-panel">
-                <div class="panel-section hold-section">
-                    <h2 class="panel-title">HOLD</h2>
-                    <div class="preview-area">
-                        <canvas id="hold-canvas" width="80" height="80"></canvas>
-                    </div>
-                </div>
-                
-                <div class="panel-section board-section">
-                    <canvas id="game-canvas" width="400" height="800"></canvas>
-                </div>
-                
-                <div class="panel-section next-section">
-                    <h2 class="panel-title">NEXT</h2>
-                    <div class="preview-area">
-                        <canvas id="next-canvas" width="80" height="80"></canvas>
-                    </div>
-                </div>
-            </div>
+        console.log('Canvas initialized');
+        console.log('Canvas size:', canvas.width, 'x', canvas.height);
+        
+        // 黄色いブロックを描画（2x2の正方形）
+        function drawYellowBlock() {
+            console.log('Drawing yellow block at:', BLOCK_X, BLOCK_Y);
             
-            <div class="info-panel">
-                <div class="info-item">
-                    <span class="info-label">Score:</span>
-                    <span class="info-value" id="score">000000</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Level:</span>
-                    <span class="info-value" id="level">01</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Lines:</span>
-                    <span class="info-value" id="lines">000</span>
-                </div>
-            </div>
+            // ブロックの各セルを描画
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const x = (BLOCK_X + i) * CELL_SIZE;
+                    const y = (BLOCK_Y + j) * CELL_SIZE;
+                    
+                    console.log('Drawing cell at:', x, y);
+                    
+                    // 黄色で塗りつぶし
+                    ctx.fillStyle = YELLOW_COLOR;
+                    ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    
+                    // 白いアウトライン
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                }
+            }
             
-            <div class="controls-panel">
-                <div class="controls-info">
-                    <p><strong>Controls:</strong></p>
-                    <p>← → : Move | ↑ : Hard Drop | ↓ : Soft Drop</p>
-                    <p>Z / X : Rotate | C : Hold | Space / P : Pause</p>
-                    <p><button id="help-btn" class="btn" style="margin-top:10px;">Help</button></p>
-                    <p><button id="reset-stats-btn" class="btn" style="margin-top:10px;">Reset Stats</button></p>
-                    <p><button id="toggle-grid-btn" class="btn" style="margin-top:10px;">Toggle Grid</button></p>
-                </div>
-            </div>
-            
-            <div class="info-panel" style="margin-top:10px;">
-                <div class="info-item">
-                    <span class="info-label">High Score:</span>
-                    <span class="info-value" id="high-score">000000</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">FPS:</span>
-                    <span class="info-value" id="fps">60</span>
-                </div>
-                <div class="info-item">
-                    <button id="stats-btn" class="btn" style="margin-top:10px;">Stats</button>
-                </div>
-                <div class="info-item">
-                    <button id="ranking-btn" class="btn" style="margin-top:10px;">Ranking</button>
-                </div>
-            </div>
-        </main>
+            console.log('Yellow block drawn successfully');
+        }
         
-        <div id="game-over-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2>Game Over</h2>
-                <p>Final Score: <span id="final-score">000000</span></p>
-                <p>High Score: <span id="final-high-score">000000</span></p>
-                <button id="restart-btn" class="btn">Restart</button>
-            </div>
-        </div>
+        // 画面をクリア
+        function clearCanvas() {
+            ctx.fillStyle = '#2d3136';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
         
-        <div id="help-modal" class="modal hidden">
-            <div class="modal-content" style="max-width:600px;">
-                <h2>How to Play</h2>
-                <div style="text-align:left;line-height:1.8;">
-                    <h3>Controls</h3>
-                    <ul>
-                        <li><strong>← →</strong>: Move piece left/right</li>
-                        <li><strong>↓</strong>: Soft drop (move down faster)</li>
-                        <li><strong>↑ / Space</strong>: Hard drop (instant drop to bottom)</li>
-                        <li><strong>Z</strong>: Rotate counter-clockwise</li>
-                        <li><strong>X</strong>: Rotate clockwise</li>
-                        <li><strong>C</strong>: Hold piece</li>
-                        <li><strong>P / Escape</strong>: Pause/Resume</li>
-                        <li><strong>D</strong>: Toggle debug mode</li>
-                    </ul>
-                    <h3>Rules</h3>
-                    <ul>
-                        <li>Clear lines by filling them completely</li>
-                        <li>Level up every 10 lines cleared</li>
-                        <li>Game speed increases with level</li>
-                        <li>Game over when pieces reach the top</li>
-                    </ul>
-                    <h3>Scoring</h3>
-                    <ul>
-                        <li>1 line: 100 × level</li>
-                        <li>2 lines: 300 × level</li>
-                        <li>3 lines: 500 × level</li>
-                        <li>4 lines (Tetris): 800 × level</li>
-                    </ul>
-                </div>
-                <button id="close-help-btn" class="btn" style="margin-top:20px;">Close</button>
-            </div>
-        </div>
+        // 描画ループ
+        function render() {
+            clearCanvas();
+            drawYellowBlock();
+            requestAnimationFrame(render);
+        }
         
-        <div id="stats-modal" class="modal hidden">
-            <div class="modal-content" style="max-width:500px;">
-                <h2>Game Statistics</h2>
-                <div id="stats-content" style="text-align:left;line-height:2;">
-                    <h3>Game Statistics</h3>
-                    <p>Total Games: <span id="total-games">0</span></p>
-                    <p>Total Play Time: <span id="total-time">0</span> minutes</p>
-                    <p>Total Lines Cleared: <span id="total-lines">0</span></p>
-                    <p>Average Score: <span id="avg-score">0</span></p>
-                    <p>Highest Level: <span id="highest-level">0</span></p>
-                </div>
-                <div style="margin-top:20px;">
-                    <button id="export-data-btn" class="btn">Export Data</button>
-                    <button id="import-data-btn" class="btn">Import Data</button>
-                </div>
-                <button id="close-stats-btn" class="btn" style="margin-top:20px;">Close</button>
-            </div>
-        </div>
-        
-        <div id="ranking-modal" class="modal hidden">
-            <div class="modal-content" style="max-width:500px;">
-                <h2>Top 10 Rankings</h2>
-                <div id="ranking-content" style="text-align:left;line-height:1.8;">
-                    <ol id="ranking-list"></ol>
-                </div>
-                <button id="close-ranking-btn" class="btn" style="margin-top:20px;">Close</button>
-            </div>
-        </div>
-    </div>
-    
-    <script type="module" src="dist/main.js"></script>
+        // 描画開始
+        console.log('Starting render loop');
+        render();
+    </script>
 </body>
 </html>
-
