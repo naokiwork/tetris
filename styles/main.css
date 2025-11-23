@@ -58,7 +58,7 @@ body {
     justify-content: center;
     gap: var(--spacing-unit);
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: flex-end; /* 下端を揃える */
 }
 
 .left-panel {
@@ -66,6 +66,8 @@ body {
     flex-direction: column;
     gap: var(--spacing-unit);
     align-items: center;
+    justify-content: flex-start;
+    align-self: flex-end; /* ゲームボードの下端に合わせる */
 }
 
 .panel-section {
