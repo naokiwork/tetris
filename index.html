@@ -27,6 +27,10 @@
                     <div class="panel-section board-section">
                         <canvas id="game-canvas" width="400" height="800"></canvas>
                     </div>
+                    <div class="panel-section next-section">
+                        <h2 class="panel-title">Next</h2>
+                        <canvas id="next-canvas" width="120" height="600"></canvas>
+                    </div>
                     <div class="panel-section controls-section">
                         <h2 class="panel-title">Controls</h2>
                         <div class="controls-list">
@@ -78,8 +82,11 @@
         function startGame() {
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
+            const nextCanvas = document.getElementById('next-canvas');
+            const nextCtx = nextCanvas.getContext('2d');
             
             const CELL_SIZE = 40;
+            const NEXT_CELL_SIZE = 20; // Nextブロック表示用のセルサイズ
             const BOARD_WIDTH = 10;
             const BOARD_HEIGHT = 20;
             const BG_COLOR = '#2d3136'; // 背景色
@@ -114,6 +121,7 @@
             // ゲーム状態
             let currentBlock = null; // 現在のブロック {type, x, y, shape}
             let placedBlocks = []; // 落下したブロックの配列 [{type, x, y, shape}, ...]
+            let nextBlocks = []; // 次の5つのブロック [{type, shape}, ...]
             let dropTimer = 0;
             let lastTime = performance.now();
             let gameActive = false;
@@ -145,6 +153,8 @@
                     setTimeout(() => {
                         countdownElement.remove();
                         gameActive = true;
+                        // 次のブロックを準備
+                        prepareNextBlocks();
                         // 最初のブロックを生成
                         spawnBlock();
                         // ゲームループ開始
@@ -158,10 +168,36 @@
                 return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
             }
             
+            // 次のブロックを準備（5つ）
+            function prepareNextBlocks() {
+                nextBlocks = [];
+                for (let i = 0; i < 5; i++) {
+                    const type = getRandomPieceType();
+                    nextBlocks.push({
+                        type: type,
+                        shape: PIECE_SHAPES[type]
+                    });
+                }
+            }
+            
             // ブロックを生成（上から）
             function spawnBlock() {
-                const type = getRandomPieceType();
-                const shape = PIECE_SHAPES[type];
+                // 次のブロックがなければ準備
+                if (nextBlocks.length === 0) {
+                    prepareNextBlocks();
+                }
+                
+                // 最初のブロックを取得
+                const nextBlock = nextBlocks.shift();
+                const type = nextBlock.type;
+                const shape = [...nextBlock.shape]; // コピーを作成
+                
+                // 次のブロックを1つ追加（常に5つ保持）
+                const newType = getRandomPieceType();
+                nextBlocks.push({
+                    type: newType,
+                    shape: PIECE_SHAPES[newType]
+                });
                 
                 // ブロックの幅を計算して中央に配置
                 const minX = Math.min(...shape.map(p => p.x));
@@ -176,6 +212,9 @@
                     shape: shape
                 };
                 console.log('Block spawned:', type, 'at:', currentBlock.x, currentBlock.y);
+                
+                // Nextブロック表示を更新
+                drawNextBlocks();
             }
             
             // ブロックが一番下に到達したかチェック
@@ -433,6 +472,46 @@
                         ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
                     }
                 }
+            }
+            
+            // Nextブロックを描画
+            function drawNextBlocks() {
+                // 背景をクリア
+                nextCtx.fillStyle = BG_COLOR;
+                nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+                
+                // 各Nextブロックを描画（最大5つ）
+                const blockHeight = 100; // 各ブロックの高さ
+                const startY = 20; // 開始位置
+                
+                nextBlocks.slice(0, 5).forEach((block, index) => {
+                    const y = startY + index * blockHeight;
+                    const color = PIECE_COLORS[block.type];
+                    
+                    // ブロックの中心を計算
+                    const minX = Math.min(...block.shape.map(p => p.x));
+                    const maxX = Math.max(...block.shape.map(p => p.x));
+                    const minY = Math.min(...block.shape.map(p => p.y));
+                    const maxY = Math.max(...block.shape.map(p => p.y));
+                    const blockWidth = (maxX - minX + 1) * NEXT_CELL_SIZE;
+                    const blockHeight2 = (maxY - minY + 1) * NEXT_CELL_SIZE;
+                    const centerX = (nextCanvas.width - blockWidth) / 2;
+                    
+                    // ブロックの各セルを描画
+                    block.shape.forEach(cell => {
+                        const x = centerX + (cell.x - minX) * NEXT_CELL_SIZE;
+                        const cellY = y + (cell.y - minY) * NEXT_CELL_SIZE;
+                        
+                        // 色で塗りつぶし
+                        nextCtx.fillStyle = color;
+                        nextCtx.fillRect(x + 1, cellY + 1, NEXT_CELL_SIZE - 2, NEXT_CELL_SIZE - 2);
+                        
+                        // 白いアウトライン
+                        nextCtx.strokeStyle = '#ffffff';
+                        nextCtx.lineWidth = 1;
+                        nextCtx.strokeRect(x + 1, cellY + 1, NEXT_CELL_SIZE - 2, NEXT_CELL_SIZE - 2);
+                    });
+                });
             }
             
             // ブロックを描画（現在のブロックと配置済みブロック）
