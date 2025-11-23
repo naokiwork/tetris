@@ -71,7 +71,11 @@ export class Game {
         this.lockDelay = 0;
         this.lastDropPosition = null;
         
+        // 最初のピースを生成
         this.spawnPiece();
+        
+        // デバッグ: ゲーム開始を確認
+        console.log('Game started! Current piece:', this.currentPiece);
     }
 
     /**
@@ -84,6 +88,10 @@ export class Game {
         this.canHold = true;
         this.lockDelay = 0;
         this.lastDropPosition = null;
+        this.dropTimer = 0; // 落下タイマーをリセット
+
+        // デバッグ: ピース生成を確認
+        console.log('Piece spawned:', pieceType, 'at position:', this.currentPiece.position);
 
         // ゲームオーバー判定
         if (this.board.isGameOver(this.currentPiece)) {
@@ -382,9 +390,9 @@ export class Game {
             this.resetLockDelay();
         }
 
-        // 自動落下（確実に動作するように）
+        // 自動落下（シンプルなロジック：500msごとに1マス落下）
         this.dropTimer += preciseDeltaTime;
-        const dropInterval = this.scoreSystem.getDropInterval(this.difficulty);
+        const dropInterval = 500; // 固定値：500ms（0.5秒）ごとに1マス落下
 
         if (this.dropTimer >= dropInterval) {
             this.dropTimer = 0;
@@ -401,8 +409,12 @@ export class Game {
                 // 下に移動可能
                 this.currentPiece = newPiece;
                 this.resetLockDelay();
+                // デバッグ: 落下を確認（頻繁すぎるのでコメントアウト）
+                // console.log('Piece moved down to:', this.currentPiece.position.y);
             } else {
                 // 下に移動できない場合は固定
+                // デバッグ: 固定を確認
+                console.log('Piece locked at:', this.currentPiece.position.y);
                 this.lockPiece();
             }
         }
