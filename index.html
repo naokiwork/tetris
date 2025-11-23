@@ -24,9 +24,40 @@
             
             <main class="game-container">
                 <div class="game-panel">
-                    <div class="panel-section hold-section">
-                        <h2 class="panel-title">Hold</h2>
-                        <canvas id="hold-canvas" width="120" height="120"></canvas>
+                    <div class="left-panel">
+                        <div class="panel-section hold-section">
+                            <h2 class="panel-title">Hold</h2>
+                            <canvas id="hold-canvas" width="120" height="120"></canvas>
+                        </div>
+                        <div class="panel-section controls-section">
+                            <h2 class="panel-title">Controls</h2>
+                            <div class="controls-list">
+                                <div class="control-item">
+                                    <span class="control-key"><span style="font-size: 1em;">←</span> <span style="font-size: 1em;">→</span></span>
+                                    <span class="control-desc">Move Left/Right</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="control-key">↓</span>
+                                    <span class="control-desc">Soft Drop</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="control-key">Z</span>
+                                    <span class="control-desc">Rotate Left</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="control-key">X</span>
+                                    <span class="control-desc">Rotate Right</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="control-key">C</span>
+                                    <span class="control-desc">Hold</span>
+                                </div>
+                                <div class="control-item">
+                                    <span class="control-key">Space</span>
+                                    <span class="control-desc">Hard Drop</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-section board-section">
                         <canvas id="game-canvas" width="400" height="800"></canvas>
@@ -34,37 +65,6 @@
                     <div class="panel-section next-section">
                         <h2 class="panel-title">Next</h2>
                         <canvas id="next-canvas" width="120" height="600"></canvas>
-                    </div>
-                </div>
-                <div class="controls-panel-bottom">
-                    <div class="panel-section controls-section">
-                        <h2 class="panel-title">Controls</h2>
-                        <div class="controls-list">
-                            <div class="control-item">
-                                <span class="control-key"><span style="font-size: 1em;">←</span> <span style="font-size: 1em;">→</span></span>
-                                <span class="control-desc">Move Left/Right</span>
-                            </div>
-                            <div class="control-item">
-                                <span class="control-key">↓</span>
-                                <span class="control-desc">Soft Drop</span>
-                            </div>
-                            <div class="control-item">
-                                <span class="control-key">Z</span>
-                                <span class="control-desc">Rotate Left</span>
-                            </div>
-                            <div class="control-item">
-                                <span class="control-key">X</span>
-                                <span class="control-desc">Rotate Right</span>
-                            </div>
-                            <div class="control-item">
-                                <span class="control-key">C</span>
-                                <span class="control-desc">Hold</span>
-                            </div>
-                            <div class="control-item">
-                                <span class="control-key">Space</span>
-                                <span class="control-desc">Hard Drop</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </main>
