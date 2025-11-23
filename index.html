@@ -133,6 +133,9 @@
             
             // カウントダウン処理（2倍速）
             function showCountdown() {
+                // カウントダウン中も背景とグリッドを描画
+                drawBackground();
+                
                 if (countdown > 0) {
                     countdownElement.textContent = countdown.toString();
                     countdown--;
@@ -181,6 +184,21 @@
                 // ブロックの形状に応じて最下部をチェック
                 const maxY = Math.max(...currentBlock.shape.map(p => p.y));
                 return currentBlock.y + maxY >= BOARD_HEIGHT - 1;
+            }
+            
+            // ゴーストピースの位置を計算（落下予測位置）
+            function getGhostPosition() {
+                if (!currentBlock) return null;
+                
+                let ghostY = currentBlock.y;
+                // 下に移動できる限り移動
+                while (!hasCollision(currentBlock.x, ghostY + 1, currentBlock.shape)) {
+                    const maxY = Math.max(...currentBlock.shape.map(p => p.y));
+                    if (ghostY + maxY >= BOARD_HEIGHT - 1) break;
+                    ghostY += 1;
+                }
+                
+                return { x: currentBlock.x, y: ghostY };
             }
             
             // 完全に埋まっている行を検出
@@ -390,29 +408,42 @@
             }
             
             // ブロックを描画
-            function drawBlock(blockX, blockY, shape, color) {
+            function drawBlock(blockX, blockY, shape, color, isGhost = false) {
                 // ブロックの各セルを描画
                 for (const cell of shape) {
                     const x = (blockX + cell.x) * CELL_SIZE;
                     const y = (blockY + cell.y) * CELL_SIZE;
                     
-                    // 色で塗りつぶし
-                    ctx.fillStyle = color;
-                    ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                    
-                    // 白いアウトライン
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    if (isGhost) {
+                        // ゴーストピースは薄く表示（アウトラインのみ）
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]); // 点線
+                        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                        ctx.setLineDash([]); // 点線をリセット
+                    } else {
+                        // 通常のブロック
+                        // 色で塗りつぶし
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                        
+                        // 白いアウトライン
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    }
                 }
             }
             
             // ブロックを描画（現在のブロックと配置済みブロック）
             function drawBlocks() {
-                // 現在のブロックを描画
+                // ゴーストピースを描画（現在のブロックの落下予測位置）
                 if (currentBlock) {
-                    const color = PIECE_COLORS[currentBlock.type];
-                    drawBlock(currentBlock.x, currentBlock.y, currentBlock.shape, color);
+                    const ghostPos = getGhostPosition();
+                    if (ghostPos && ghostPos.y !== currentBlock.y) {
+                        const ghostColor = PIECE_COLORS[currentBlock.type];
+                        drawBlock(ghostPos.x, ghostPos.y, currentBlock.shape, ghostColor, true);
+                    }
                 }
                 
                 // 配置済みブロックを描画
@@ -420,6 +451,12 @@
                     const color = PIECE_COLORS[block.type];
                     drawBlock(block.x, block.y, block.shape, color);
                 });
+                
+                // 現在のブロックを描画（最後に描画して前面に表示）
+                if (currentBlock) {
+                    const color = PIECE_COLORS[currentBlock.type];
+                    drawBlock(currentBlock.x, currentBlock.y, currentBlock.shape, color);
+                }
             }
             
             // ゲーム更新
