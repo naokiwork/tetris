@@ -364,8 +364,29 @@
             
             // 背景を描画
             function drawBackground() {
+                // 背景色で塗りつぶし
                 ctx.fillStyle = BG_COLOR;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // グリッド線を描画（薄め）
+                ctx.strokeStyle = 'rgba(139, 148, 158, 0.3)'; // 薄いグリッド色
+                ctx.lineWidth = 1;
+                
+                // 縦線を描画
+                for (let x = 0; x <= BOARD_WIDTH; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * CELL_SIZE, 0);
+                    ctx.lineTo(x * CELL_SIZE, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // 横線を描画
+                for (let y = 0; y <= BOARD_HEIGHT; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * CELL_SIZE);
+                    ctx.lineTo(canvas.width, y * CELL_SIZE);
+                    ctx.stroke();
+                }
             }
             
             // ブロックを描画
