@@ -224,12 +224,12 @@
                 const width = maxX - minX + 1;
                 const startX = Math.floor((BOARD_WIDTH - width) / 2) - minX;
                 
-                // ブロックの形状の最小y座標を計算
-                const minY = Math.min(...shape.map(p => p.y));
+                // ブロックの形状の最大y座標を計算
+                const maxY = Math.max(...shape.map(p => p.y));
                 
                 // ブロック全体が画面外（y < 0）になるように初期位置を設定
-                // 最小y座標が-1になるように、初期yを-1 - minYに設定
-                const startY = -1 - minY;
+                // ブロックの最下部がy=-1になるように、初期yを-1 - maxYに設定
+                const startY = -1 - maxY;
                 
                 currentBlock = {
                     type: type,
@@ -272,10 +272,10 @@
                     const width = maxX - minX + 1;
                     const startX = Math.floor((BOARD_WIDTH - width) / 2) - minX;
                     
-                    // ブロックの形状の最小y座標を計算
-                    const minY = Math.min(...shape.map(p => p.y));
+                    // ブロックの形状の最大y座標を計算
+                    const maxY = Math.max(...shape.map(p => p.y));
                     // ブロック全体が画面外（y < 0）になるように初期位置を設定
-                    const startY = -1 - minY;
+                    const startY = -1 - maxY;
                     
                     currentBlock = {
                         type: type,
@@ -350,6 +350,19 @@
                     for (const cell of block.shape) {
                         const x = block.x + cell.x;
                         const y = block.y + cell.y;
+                        
+                        // 真ん中4列の画面上部（y < 0）にブロックがあるかチェック
+                        if (centerColumns.includes(x) && y < 0) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // 現在落下中のブロックもチェック
+                if (currentBlock) {
+                    for (const cell of currentBlock.shape) {
+                        const x = currentBlock.x + cell.x;
+                        const y = currentBlock.y + cell.y;
                         
                         // 真ん中4列の画面上部（y < 0）にブロックがあるかチェック
                         if (centerColumns.includes(x) && y < 0) {
