@@ -48,34 +48,24 @@ export class Game {
     }
 
     /**
-     * ゲーム開始（タスク17, 69, 77: 全ての状態を確実にリセット）
+     * ゲーム開始（シンプルなデバッグ用実装）
      */
     start(): void {
-        // タスク77: ゲーム状態の遷移を厳密に管理
-        if (this.state === GameState.PLAYING) {
-            this.state = GameState.MENU;
-        }
-        
-        // 全ての状態を確実にリセット
-        this.board.clear();
-        this.scoreSystem.reset();
-        this.bagSystem = new BagSystem();
-        this.holdPieceType = null;
-        this.canHold = true;
-        this.currentPiece = null; // 現在のピースもリセット
+        // シンプルな実装：黄色のブロック（Oピース）を真ん中ら辺に表示
         this.state = GameState.PLAYING;
-        this.nextPieceType = this.bagSystem.getNext();
+        this.currentPiece = {
+            type: 'O',
+            position: { x: 4, y: 5 }, // 真ん中ら辺の位置
+            rotation: 0,
+            shape: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 }
+            ]
+        };
         
-        // タスク69: リスタート時に全てのタイマーを確実にリセット
-        this.dropTimer = 0;
-        this.lockDelay = 0;
-        this.lastDropPosition = null;
-        
-        // 最初のピースを生成
-        this.spawnPiece();
-        
-        // デバッグ: ゲーム開始を確認
-        console.log('Game started! Current piece:', this.currentPiece);
+        console.log('Game started! Yellow block (O piece) created at:', this.currentPiece.position);
     }
 
     /**
@@ -357,67 +347,12 @@ export class Game {
      * ゲーム更新（落下処理）
      */
     update(deltaTime: number): void {
+        // シンプルなデバッグ用実装：何もしない（ブロックを表示するだけ）
         // ゲームが開始されていない場合は更新しない
         if (this.state !== GameState.PLAYING) {
             return;
         }
-
-        // ピースがない場合は生成を試みる
-        if (!this.currentPiece) {
-            this.spawnPiece();
-            return;
-        }
-
-        // 異常に大きなdeltaTimeを無視（タブが非アクティブになった場合など）
-        if (deltaTime > 1000) {
-            return;
-        }
-
-        // より正確な時間計測のため、performance.now()を使用
-        const currentTime = performance.now();
-        const preciseDeltaTime = Math.min(deltaTime, 100); // 最大100msに制限
-
-        // ロック遅延チェック
-        if (this.lastDropPosition && 
-            this.currentPiece.position.x === this.lastDropPosition.x &&
-            this.currentPiece.position.y === this.lastDropPosition.y) {
-            this.lockDelay += preciseDeltaTime;
-            if (this.lockDelay >= this.lockDelayTime) {
-                this.lockPiece();
-                return;
-            }
-        } else {
-            this.resetLockDelay();
-        }
-
-        // 自動落下（シンプルなロジック：500msごとに1マス落下）
-        this.dropTimer += preciseDeltaTime;
-        const dropInterval = 500; // 固定値：500ms（0.5秒）ごとに1マス落下
-
-        if (this.dropTimer >= dropInterval) {
-            this.dropTimer = 0;
-            // 下に移動できるかチェック
-            const newPiece: Piece = {
-                ...this.currentPiece,
-                position: {
-                    x: this.currentPiece.position.x,
-                    y: this.currentPiece.position.y + 1
-                }
-            };
-
-            if (!this.board.hasCollision(newPiece)) {
-                // 下に移動可能
-                this.currentPiece = newPiece;
-                this.resetLockDelay();
-                // デバッグ: 落下を確認（頻繁すぎるのでコメントアウト）
-                // console.log('Piece moved down to:', this.currentPiece.position.y);
-            } else {
-                // 下に移動できない場合は固定
-                // デバッグ: 固定を確認
-                console.log('Piece locked at:', this.currentPiece.position.y);
-                this.lockPiece();
-            }
-        }
+        // ブロックは固定表示（落下ロジックは一旦無視）
     }
 
     /**

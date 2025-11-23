@@ -123,12 +123,15 @@ class TetrisApp {
         this.loadHighScore();
         this.updateHighScoreDisplay();
 
-        // スタートボタンのイベントリスナー
+        // スタートボタンのイベントリスナー（シンプルなデバッグ用実装）
         const startBtn = document.getElementById('start-btn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
+                console.log('Start button clicked!');
                 this.hideTitleScreen();
-                this.startGameWithCountdown();
+                // カウントダウンをスキップして直接ゲーム開始
+                this.game.start();
+                console.log('Game started, current piece:', this.game.getCurrentPiece());
             });
         }
 

@@ -275,17 +275,23 @@ export class Renderer {
     }
 
     /**
-     * 現在のピースを描画
+     * 現在のピースを描画（シンプルなデバッグ用実装）
      */
     private drawCurrentPiece(game: Game): void {
         const piece = game.getCurrentPiece();
         if (!piece) {
             // ピースがない場合は何も描画しない
+            console.log('No piece to draw');
             return;
         }
 
+        console.log('Drawing piece:', piece.type, 'at position:', piece.position);
+        
         // ピースが確実に表示されるように描画
         this.drawPiece(this.gameCtx, piece, this.CELL_SIZE);
+        
+        // デバッグ: 黄色のブロックを確実に表示
+        console.log('Piece drawn successfully');
     }
 
     /**
