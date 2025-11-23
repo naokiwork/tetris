@@ -109,7 +109,7 @@
             const CELL_SIZE = 30;
             const blocks = [];
             let lastSpawnTime = 0;
-            const SPAWN_INTERVAL = 800; // 新しいブロックを生成する間隔（ミリ秒）
+            const SPAWN_INTERVAL = 250; // 新しいブロックを生成する間隔（ミリ秒）- 3倍の頻度
             
             // 初期ブロックを生成
             function createBlock() {
@@ -133,9 +133,9 @@
             }
             
             // 初期ブロックを生成（画面全体に分散）
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 30; i++) {
                 const block = createBlock();
-                block.y = -Math.random() * titleCanvas.height - 50; // 画面外のランダムな位置
+                block.y = -Math.random() * titleCanvas.height * 2 - 50; // 画面外のランダムな位置
                 blocks.push(block);
             }
             
@@ -177,11 +177,15 @@
                 titleCtx.fillStyle = 'rgba(13, 17, 23, 0.15)';
                 titleCtx.fillRect(0, 0, titleCanvas.width, titleCanvas.height);
                 
-                // 定期的に新しいブロックを生成
+                // 定期的に新しいブロックを生成（複数同時に生成）
                 if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
-                    const newBlock = createBlock();
-                    newBlock.y = -Math.max(...newBlock.shape.map(p => p.y)) * CELL_SIZE - 20;
-                    blocks.push(newBlock);
+                    // 一度に2〜3個のブロックを生成
+                    const spawnCount = Math.floor(Math.random() * 2) + 2; // 2個または3個
+                    for (let i = 0; i < spawnCount; i++) {
+                        const newBlock = createBlock();
+                        newBlock.y = -Math.max(...newBlock.shape.map(p => p.y)) * CELL_SIZE - 20 - i * 30;
+                        blocks.push(newBlock);
+                    }
                     lastSpawnTime = currentTime;
                 }
                 
