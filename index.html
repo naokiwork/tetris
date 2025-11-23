@@ -55,17 +55,23 @@
             const ctx = canvas.getContext('2d');
             
             const CELL_SIZE = 40;
-            const BLOCK_X = 4; // 中央付近のX座標
-            const BLOCK_Y = 5; // 中央付近のY座標
+            const BOARD_WIDTH = 10;
+            const BOARD_HEIGHT = 20;
             const YELLOW_COLOR = '#ffeb3b'; // 黄色
             const BG_COLOR = '#2d3136'; // 背景色
+            const DROP_INTERVAL = 500; // 落下間隔（ミリ秒）
             
             console.log('Canvas initialized');
             console.log('Canvas size:', canvas.width, 'x', canvas.height);
             
+            // ゲーム状態
+            let currentBlock = null; // 現在のブロック {x, y}
+            let dropTimer = 0;
+            let lastTime = performance.now();
+            let gameActive = false;
+            
             // カウントダウン表示
             let countdown = 3;
-            let countdownActive = true;
             
             // カウントダウン要素を作成
             const countdownElement = document.createElement('div');
@@ -83,11 +89,29 @@
                     countdownElement.textContent = 'START!';
                     setTimeout(() => {
                         countdownElement.remove();
-                        countdownActive = false;
-                        // カウントダウン終了後にゲーム描画を開始
-                        startGameRender();
+                        gameActive = true;
+                        // 最初のブロックを生成
+                        spawnBlock();
+                        // ゲームループ開始
+                        gameLoop();
                     }, 500);
                 }
+            }
+            
+            // ブロックを生成（上から）
+            function spawnBlock() {
+                currentBlock = {
+                    x: 4, // 中央
+                    y: 0  // 上から
+                };
+                console.log('Block spawned at:', currentBlock.x, currentBlock.y);
+            }
+            
+            // ブロックが一番下に到達したかチェック
+            function isBlockAtBottom() {
+                if (!currentBlock) return false;
+                // 2x2のブロックなので、y + 2がボードの高さに達したら
+                return currentBlock.y + 2 >= BOARD_HEIGHT;
             }
             
             // 背景を描画
@@ -98,15 +122,13 @@
             
             // 黄色いブロックを描画（2x2の正方形）
             function drawYellowBlock() {
-                console.log('Drawing yellow block at:', BLOCK_X, BLOCK_Y);
+                if (!currentBlock) return;
                 
                 // ブロックの各セルを描画
                 for (let i = 0; i < 2; i++) {
                     for (let j = 0; j < 2; j++) {
-                        const x = (BLOCK_X + i) * CELL_SIZE;
-                        const y = (BLOCK_Y + j) * CELL_SIZE;
-                        
-                        console.log('Drawing cell at:', x, y);
+                        const x = (currentBlock.x + i) * CELL_SIZE;
+                        const y = (currentBlock.y + j) * CELL_SIZE;
                         
                         // 黄色で塗りつぶし
                         ctx.fillStyle = YELLOW_COLOR;
@@ -118,20 +140,43 @@
                         ctx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
                     }
                 }
-                
-                console.log('Yellow block drawn successfully');
             }
             
-            // ゲーム描画ループ（カウントダウン後に開始）
-            function startGameRender() {
-                function render() {
-                    drawBackground();
-                    drawYellowBlock();
-                    requestAnimationFrame(render);
-                }
+            // ゲーム更新
+            function update(deltaTime) {
+                if (!gameActive || !currentBlock) return;
                 
-                console.log('Starting render loop');
-                render();
+                dropTimer += deltaTime;
+                
+                if (dropTimer >= DROP_INTERVAL) {
+                    dropTimer = 0;
+                    
+                    // ブロックを下に移動
+                    if (isBlockAtBottom()) {
+                        // 一番下に到達したら、次のブロックを生成
+                        console.log('Block reached bottom, spawning next block');
+                        spawnBlock();
+                    } else {
+                        // まだ下に移動できる
+                        currentBlock.y += 1;
+                    }
+                }
+            }
+            
+            // ゲームループ
+            function gameLoop() {
+                const currentTime = performance.now();
+                const deltaTime = currentTime - lastTime;
+                lastTime = currentTime;
+                
+                // ゲーム更新
+                update(deltaTime);
+                
+                // 描画
+                drawBackground();
+                drawYellowBlock();
+                
+                requestAnimationFrame(gameLoop);
             }
             
             // カウントダウン開始
