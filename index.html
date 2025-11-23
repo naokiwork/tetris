@@ -66,6 +66,7 @@
             
             // ゲーム状態
             let currentBlock = null; // 現在のブロック {x, y}
+            let placedBlocks = []; // 落下したブロックの配列 [{x, y}, ...]
             let dropTimer = 0;
             let lastTime = performance.now();
             let gameActive = false;
@@ -120,15 +121,13 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
-            // 黄色いブロックを描画（2x2の正方形）
-            function drawYellowBlock() {
-                if (!currentBlock) return;
-                
+            // ブロックを描画（2x2の正方形）
+            function drawBlock(blockX, blockY) {
                 // ブロックの各セルを描画
                 for (let i = 0; i < 2; i++) {
                     for (let j = 0; j < 2; j++) {
-                        const x = (currentBlock.x + i) * CELL_SIZE;
-                        const y = (currentBlock.y + j) * CELL_SIZE;
+                        const x = (blockX + i) * CELL_SIZE;
+                        const y = (blockY + j) * CELL_SIZE;
                         
                         // 黄色で塗りつぶし
                         ctx.fillStyle = YELLOW_COLOR;
@@ -142,6 +141,19 @@
                 }
             }
             
+            // 黄色いブロックを描画（現在のブロックと配置済みブロック）
+            function drawYellowBlocks() {
+                // 現在のブロックを描画
+                if (currentBlock) {
+                    drawBlock(currentBlock.x, currentBlock.y);
+                }
+                
+                // 配置済みブロックを描画
+                placedBlocks.forEach(block => {
+                    drawBlock(block.x, block.y);
+                });
+            }
+            
             // ゲーム更新
             function update(deltaTime) {
                 if (!gameActive || !currentBlock) return;
@@ -153,8 +165,10 @@
                     
                     // ブロックを下に移動
                     if (isBlockAtBottom()) {
-                        // 一番下に到達したら、次のブロックを生成
-                        console.log('Block reached bottom, spawning next block');
+                        // 一番下に到達したら、現在のブロックを配置済みブロックに追加
+                        console.log('Block reached bottom, placing block');
+                        placedBlocks.push({x: currentBlock.x, y: currentBlock.y});
+                        // 次のブロックを生成
                         spawnBlock();
                     } else {
                         // まだ下に移動できる
@@ -174,7 +188,7 @@
                 
                 // 描画
                 drawBackground();
-                drawYellowBlock();
+                drawYellowBlocks();
                 
                 requestAnimationFrame(gameLoop);
             }
