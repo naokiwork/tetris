@@ -761,36 +761,43 @@
             
             // ゲームオーバー画面を描画
             function drawGameOver() {
-                if (!gameOver) return;
+                if (!gameOver) {
+                    // ゲームオーバー要素を非表示
+                    const gameOverElement = document.getElementById('game-over-overlay');
+                    if (gameOverElement) {
+                        gameOverElement.classList.add('hidden');
+                    }
+                    return;
+                }
                 
-                // 画面を暗くするオーバーレイ
+                // ゲームオーバー要素を表示
+                let gameOverElement = document.getElementById('game-over-overlay');
+                if (!gameOverElement) {
+                    // ゲームオーバーオーバーレイを作成
+                    gameOverElement = document.createElement('div');
+                    gameOverElement.id = 'game-over-overlay';
+                    gameOverElement.innerHTML = `
+                        <div class="game-over-content">
+                            <div id="game-over-text" class="game-over-text">Game Over</div>
+                            <div id="retry-message" class="retry-message hidden">Press Enter To Retry</div>
+                        </div>
+                    `;
+                    document.getElementById('game-screen').appendChild(gameOverElement);
+                }
+                
+                gameOverElement.classList.remove('hidden');
+                
+                // リトライメッセージの表示/非表示
+                const retryMessage = document.getElementById('retry-message');
+                if (showRetryMessage) {
+                    retryMessage.classList.remove('hidden');
+                } else {
+                    retryMessage.classList.add('hidden');
+                }
+                
+                // Canvas上にも暗いオーバーレイを描画
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // ゲームオーバーテキスト（グラデーション）
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                
-                if (!showRetryMessage) {
-                    // "ゲームオーバー"をグラデーションで表示
-                    const gradient = ctx.createLinearGradient(centerX - 150, centerY - 50, centerX + 150, centerY + 50);
-                    gradient.addColorStop(0, '#f44336');
-                    gradient.addColorStop(0.5, '#ff9800');
-                    gradient.addColorStop(1, '#f44336');
-                    
-                    ctx.fillStyle = gradient;
-                    ctx.font = 'bold 80px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('ゲームオーバー', centerX, centerY);
-                } else {
-                    // "Press Enter To Retry"を表示
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 40px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('Press Enter To Retry', centerX, centerY);
-                }
             }
             
             // ゲームリセット
