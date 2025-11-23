@@ -305,13 +305,85 @@
             let score = 0;
             let level = 1;
             let lines = 0;
+            let combo = 0; // コンボ数
+            let lastClearTime = 0; // 最後にラインを消去した時刻
+            let softDropScore = 0; // ソフトドロップスコア
             const DROP_INTERVAL_BASE = 500; // 基本落下間隔（ミリ秒）
+            const COMBO_TIMEOUT = 2000; // コンボタイムアウト（ミリ秒）
+            
+            // ハイスコアの読み込み
+            let highScore = parseInt(localStorage.getItem('tetrisHighScore') || '0', 10);
             
             // スコア・レベル・ライン数の表示を更新
             function updateScoreDisplay() {
-                document.getElementById('score-value').textContent = score.toLocaleString();
-                document.getElementById('level-value').textContent = level;
-                document.getElementById('lines-value').textContent = lines;
+                const scoreElement = document.getElementById('score-value');
+                const levelElement = document.getElementById('level-value');
+                const linesElement = document.getElementById('lines-value');
+                
+                if (scoreElement) {
+                    const oldScore = parseInt(scoreElement.textContent.replace(/,/g, '') || '0', 10);
+                    const newScore = score;
+                    scoreElement.textContent = newScore.toLocaleString();
+                    
+                    // スコアが増加した時にアニメーション効果
+                    if (newScore > oldScore) {
+                        scoreElement.style.transform = 'scale(1.2)';
+                        scoreElement.style.color = '#4caf50';
+                        setTimeout(() => {
+                            scoreElement.style.transform = 'scale(1)';
+                            scoreElement.style.color = '';
+                        }, 300);
+                    }
+                }
+                
+                if (levelElement) {
+                    const oldLevel = parseInt(levelElement.textContent || '1', 10);
+                    const newLevel = level;
+                    levelElement.textContent = newLevel;
+                    
+                    // レベルが上がった時にアニメーション効果
+                    if (newLevel > oldLevel) {
+                        levelElement.style.transform = 'scale(1.3)';
+                        levelElement.style.color = '#ff9800';
+                        setTimeout(() => {
+                            levelElement.style.transform = 'scale(1)';
+                            levelElement.style.color = '';
+                        }, 500);
+                    }
+                }
+                
+                if (linesElement) {
+                    linesElement.textContent = lines;
+                }
+                
+                // ハイスコアの更新
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('tetrisHighScore', highScore.toString());
+                    updateHighScoreDisplay();
+                }
+            }
+            
+            // ハイスコア表示の更新
+            function updateHighScoreDisplay() {
+                let highScoreElement = document.getElementById('high-score-value');
+                if (!highScoreElement) {
+                    // ハイスコア表示を追加
+                    const scorePanel = document.querySelector('.score-panel');
+                    if (scorePanel) {
+                        const highScoreItem = document.createElement('div');
+                        highScoreItem.className = 'score-item';
+                        highScoreItem.innerHTML = `
+                            <span class="score-label">High Score</span>
+                            <span id="high-score-value" class="score-value">${highScore.toLocaleString()}</span>
+                        `;
+                        scorePanel.appendChild(highScoreItem);
+                        highScoreElement = document.getElementById('high-score-value');
+                    }
+                }
+                if (highScoreElement) {
+                    highScoreElement.textContent = highScore.toLocaleString();
+                }
             }
             
             // スコア計算（ライン消去時）
@@ -682,8 +754,39 @@
                 // テトリス（4ライン同時消去）の特別表示
                 if (linesCleared === 4) {
                     console.log('TETRIS!');
-                    // 将来的にエフェクトを追加可能
+                    // テトリス時の特別なエフェクトとメッセージを表示
+                    showTetrisEffect();
                 }
+            
+            // テトリスエフェクト表示
+            function showTetrisEffect() {
+                const canvas = document.getElementById('game-canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // テトリスメッセージを表示
+                const tetrisElement = document.createElement('div');
+                tetrisElement.id = 'tetris-message';
+                tetrisElement.textContent = 'TETRIS!';
+                tetrisElement.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 100px;
+                    font-weight: bold;
+                    color: #ffeb3b;
+                    text-shadow: 0 0 20px #ff9800, 0 0 40px #ff9800;
+                    z-index: 10002;
+                    pointer-events: none;
+                    animation: tetrisPulse 1s ease-out;
+                `;
+                document.body.appendChild(tetrisElement);
+                
+                // 1秒後に削除
+                setTimeout(() => {
+                    tetrisElement.remove();
+                }, 1000);
+            }
                 
                 console.log('Rows cleared:', linesCleared, 'Combo:', combo, 'Total lines:', lines, 'Score:', score, 'Level:', level);
             }
@@ -762,6 +865,10 @@
                         if (!hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                             currentBlock.y += 1;
                             dropTimer = 0; // タイマーリセット
+                            // ソフトドロップ時に1マスあたり1点を加算
+                            softDropScore += 1;
+                            score += 1;
+                            updateScoreDisplay();
                         }
                         break;
                     case 'z':
@@ -1078,6 +1185,9 @@
                     gameOverElement.innerHTML = `
                         <div class="game-over-content">
                             <div id="game-over-text" class="game-over-text">Game Over</div>
+                            <div id="final-score" class="final-score">Score: <span id="final-score-value">0</span></div>
+                            <div id="final-level" class="final-level">Level: <span id="final-level-value">1</span></div>
+                            <div id="final-lines" class="final-lines">Lines: <span id="final-lines-value">0</span></div>
                             <div id="retry-message" class="retry-message hidden">Press Enter To Retry</div>
                         </div>
                     `;
@@ -1085,6 +1195,14 @@
                 }
                 
                 gameOverElement.classList.remove('hidden');
+                
+                // 最終スコアを表示
+                const finalScoreValue = gameOverElement.querySelector('#final-score-value');
+                const finalLevelValue = gameOverElement.querySelector('#final-level-value');
+                const finalLinesValue = gameOverElement.querySelector('#final-lines-value');
+                if (finalScoreValue) finalScoreValue.textContent = score.toLocaleString();
+                if (finalLevelValue) finalLevelValue.textContent = level;
+                if (finalLinesValue) finalLinesValue.textContent = lines;
                 
                 // リトライメッセージの表示/非表示
                 const retryMessage = gameOverElement.querySelector('#retry-message');
