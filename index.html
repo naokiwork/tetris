@@ -337,15 +337,39 @@
             }
             
             // ランダムにブロックタイプを選ぶ
-            function getRandomPieceType() {
-                return PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+            // 7-Bag System: 7種類のテトリミノを1セットとしてシャッフルして提供
+            let pieceBag = [];
+            
+            // Fisher-Yatesアルゴリズムでシャッフル
+            function shuffleArray(array) {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
             }
             
-            // 次のブロックを準備（5つ）
+            // 新しいバッグを生成（7種類のテトリミノをシャッフル）
+            function generateNewBag() {
+                pieceBag = shuffleArray([...PIECE_TYPES]);
+            }
+            
+            // バッグから次のテトリミノを取得
+            function getNextPieceFromBag() {
+                // バッグが空の場合は新しいバッグを生成
+                if (pieceBag.length === 0) {
+                    generateNewBag();
+                }
+                // バッグの最初の要素を取得して削除
+                return pieceBag.shift();
+            }
+            
+            // 次のブロックを準備（5つ）- 7-Bag Systemを使用
             function prepareNextBlocks() {
                 nextBlocks = [];
                 for (let i = 0; i < 5; i++) {
-                    const type = getRandomPieceType();
+                    const type = getNextPieceFromBag();
                     nextBlocks.push({
                         type: type,
                         shape: PIECE_SHAPES[type]
@@ -365,8 +389,8 @@
                 const type = nextBlock.type;
                 const shape = [...nextBlock.shape]; // コピーを作成
                 
-                // 次のブロックを1つ追加（常に5つ保持）
-                const newType = getRandomPieceType();
+                // 次のブロックを1つ追加（常に5つ保持）- 7-Bag Systemを使用
+                const newType = getNextPieceFromBag();
                 nextBlocks.push({
                     type: newType,
                     shape: PIECE_SHAPES[newType]
