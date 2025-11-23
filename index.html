@@ -121,10 +121,14 @@
             // カウントダウン表示
             let countdown = 3;
             
-            // カウントダウン要素を作成
+            // カウントダウン要素を作成（Canvasの中心に配置）
             const countdownElement = document.createElement('div');
             countdownElement.id = 'countdown';
-            countdownElement.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);';
+            // Canvasの位置を取得して中央に配置
+            const canvasRect = canvas.getBoundingClientRect();
+            const canvasCenterX = canvasRect.left + canvasRect.width / 2;
+            const canvasCenterY = canvasRect.top + canvasRect.height / 2;
+            countdownElement.style.cssText = `position:fixed;top:${canvasCenterY}px;left:${canvasCenterX}px;transform:translate(-50%,-50%);font-size:120px;font-weight:bold;color:#0969da;z-index:10001;pointer-events:none;text-shadow:2px 2px 4px rgba(0,0,0,0.5);`;
             document.body.appendChild(countdownElement);
             
             // カウントダウン処理（2倍速）
@@ -222,18 +226,21 @@
                 switch(e.key) {
                     case 'ArrowLeft':
                         // 左に移動
+                        e.preventDefault();
                         if (!hasCollision(currentBlock.x - 1, currentBlock.y, currentBlock.shape)) {
                             currentBlock.x -= 1;
                         }
                         break;
                     case 'ArrowRight':
                         // 右に移動
+                        e.preventDefault();
                         if (!hasCollision(currentBlock.x + 1, currentBlock.y, currentBlock.shape)) {
                             currentBlock.x += 1;
                         }
                         break;
                     case 'ArrowDown':
                         // ソフトドロップ（下に移動）
+                        e.preventDefault(); // スクロールを防ぐ
                         if (!hasCollision(currentBlock.x, currentBlock.y + 1, currentBlock.shape)) {
                             currentBlock.y += 1;
                             dropTimer = 0; // タイマーリセット

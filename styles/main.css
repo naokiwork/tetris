@@ -125,6 +125,12 @@ body {
     font-weight: 600;
     min-width: 60px;
     text-align: center;
+    white-space: nowrap;
+}
+
+.control-key span {
+    display: inline-block;
+    font-size: 1em;
 }
 
 .control-desc {
