@@ -9,6 +9,7 @@
 <body>
     <!-- タイトル画面 -->
     <div id="title-screen" class="title-screen">
+        <canvas id="title-canvas"></canvas>
         <div class="title-content">
             <h1 class="title-main">TETRIS</h1>
             <p class="title-subtitle">Press ENTER to Start</p>
@@ -76,6 +77,136 @@
         const titleScreen = document.getElementById('title-screen');
         const gameScreen = document.getElementById('game-screen');
         let gameStarted = false;
+        
+        // タイトル画面のアニメーション
+        function initTitleAnimation() {
+            const titleCanvas = document.getElementById('title-canvas');
+            titleCanvas.width = window.innerWidth;
+            titleCanvas.height = window.innerHeight;
+            const titleCtx = titleCanvas.getContext('2d');
+            
+            // テトリミノの種類と色（ゲームと同じ）
+            const PIECE_TYPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+            const PIECE_COLORS = {
+                'I': '#00f0ff',
+                'O': '#ffeb3b',
+                'T': '#ba68c8',
+                'S': '#4caf50',
+                'Z': '#f44336',
+                'J': '#2196f3',
+                'L': '#ff9800'
+            };
+            const PIECE_SHAPES = {
+                'I': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}],
+                'O': [{x: 0, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}],
+                'T': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}],
+                'S': [{x: -1, y: 1}, {x: 0, y: 1}, {x: 0, y: 0}, {x: 1, y: 0}],
+                'Z': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 0, y: 1}, {x: 1, y: 1}],
+                'J': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: -1, y: 1}],
+                'L': [{x: -1, y: 0}, {x: 0, y: 0}, {x: 1, y: 0}, {x: 1, y: 1}]
+            };
+            
+            const CELL_SIZE = 30;
+            const blocks = [];
+            
+            // 初期ブロックを生成
+            function createBlock() {
+                const type = PIECE_TYPES[Math.floor(Math.random() * PIECE_TYPES.length)];
+                const shape = PIECE_SHAPES[type];
+                const minX = Math.min(...shape.map(p => p.x));
+                const maxX = Math.max(...shape.map(p => p.x));
+                const width = maxX - minX + 1;
+                const startX = Math.random() * (titleCanvas.width / CELL_SIZE - width) + width / 2;
+                
+                return {
+                    type: type,
+                    x: startX,
+                    y: -Math.max(...shape.map(p => p.y)) - 1,
+                    shape: shape,
+                    speed: 0.3 + Math.random() * 0.5,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.02
+                };
+            }
+            
+            // 10個のブロックを生成
+            for (let i = 0; i < 10; i++) {
+                const block = createBlock();
+                block.y = -10 - i * 5; // 初期位置をずらす
+                blocks.push(block);
+            }
+            
+            // ブロックを描画
+            function drawBlock(block) {
+                titleCtx.save();
+                titleCtx.translate(block.x * CELL_SIZE, block.y * CELL_SIZE);
+                titleCtx.rotate(block.rotation);
+                
+                const color = PIECE_COLORS[block.type];
+                block.shape.forEach(cell => {
+                    const x = cell.x * CELL_SIZE;
+                    const y = cell.y * CELL_SIZE;
+                    
+                    // グラデーション効果
+                    const gradient = titleCtx.createRadialGradient(x + CELL_SIZE/2, y + CELL_SIZE/2, 0, x + CELL_SIZE/2, y + CELL_SIZE/2, CELL_SIZE);
+                    gradient.addColorStop(0, color);
+                    gradient.addColorStop(1, color + '80');
+                    
+                    titleCtx.fillStyle = gradient;
+                    titleCtx.fillRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    
+                    // 光沢効果
+                    titleCtx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    titleCtx.lineWidth = 2;
+                    titleCtx.strokeRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                });
+                
+                titleCtx.restore();
+            }
+            
+            // アニメーションループ
+            function animate() {
+                if (titleScreen.classList.contains('hidden')) {
+                    return; // タイトル画面が非表示の場合は停止
+                }
+                
+                // 背景をクリア（半透明にして残像効果）
+                titleCtx.fillStyle = 'rgba(13, 17, 23, 0.1)';
+                titleCtx.fillRect(0, 0, titleCanvas.width, titleCanvas.height);
+                
+                // ブロックを更新・描画
+                blocks.forEach((block, index) => {
+                    block.y += block.speed;
+                    block.rotation += block.rotationSpeed;
+                    
+                    // 画面下部に到達したら上から再生成
+                    const maxY = Math.max(...block.shape.map(p => p.y));
+                    if (block.y + maxY * CELL_SIZE > titleCanvas.height + 50) {
+                        const newBlock = createBlock();
+                        block.x = newBlock.x;
+                        block.y = -10;
+                        block.speed = newBlock.speed;
+                        block.type = newBlock.type;
+                        block.shape = newBlock.shape;
+                    }
+                    
+                    drawBlock(block);
+                });
+                
+                requestAnimationFrame(animate);
+            }
+            
+            // リサイズ時の処理
+            window.addEventListener('resize', () => {
+                titleCanvas.width = window.innerWidth;
+                titleCanvas.height = window.innerHeight;
+            });
+            
+            animate();
+        }
+        
+        // タイトル画面のアニメーションを初期化
+        initTitleAnimation();
         
         // Enterキーでゲーム開始
         document.addEventListener('keydown', (e) => {
