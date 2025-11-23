@@ -25,9 +25,6 @@ export class ScoreSystem {
                 detail: { oldLevel, newLevel }
             });
             window.dispatchEvent(levelUpEvent);
-            // タスク2, 17: レベルアップ時の音響通知
-            const audioSystem = new (await import('./audio')).AudioSystem();
-            audioSystem.playLevelUp();
             // タスク67: レベルアップ時に落下速度を確実に更新
             // getDropInterval()が呼ばれるたびに最新のレベルを使用するため、自動的に更新される
         }

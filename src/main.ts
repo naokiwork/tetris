@@ -51,7 +51,8 @@ class TetrisApp {
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
                 this.hideGameOverModal();
-                this.startGameWithCountdown(); // タスク17: リスタート時もカウントダウン
+                this.showTitleScreen();
+                // リスタート時はタイトル画面に戻る（スタートボタンで再開）
             });
         }
 
@@ -122,8 +123,45 @@ class TetrisApp {
         this.loadHighScore();
         this.updateHighScoreDisplay();
 
-        // ゲーム開始（カウントダウンアニメーション付き）
-        this.startGameWithCountdown();
+        // スタートボタンのイベントリスナー
+        const startBtn = document.getElementById('start-btn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                this.hideTitleScreen();
+                this.startGameWithCountdown();
+            });
+        }
+
+        // タイトル画面を表示（ゲームは自動開始しない）
+        this.showTitleScreen();
+    }
+
+    /**
+     * タイトル画面を表示
+     */
+    private showTitleScreen(): void {
+        const titleScreen = document.getElementById('title-screen');
+        const gameContainer = document.querySelector('.game-container');
+        if (titleScreen) {
+            titleScreen.classList.remove('hidden');
+        }
+        if (gameContainer) {
+            gameContainer.classList.add('hidden');
+        }
+    }
+
+    /**
+     * タイトル画面を非表示
+     */
+    private hideTitleScreen(): void {
+        const titleScreen = document.getElementById('title-screen');
+        const gameContainer = document.querySelector('.game-container');
+        if (titleScreen) {
+            titleScreen.classList.add('hidden');
+        }
+        if (gameContainer) {
+            gameContainer.classList.remove('hidden');
+        }
     }
 
     /**
@@ -409,6 +447,12 @@ class TetrisApp {
      * ゲームループ
      */
     private gameLoop(currentTime: number): void {
+        // タイトル画面が表示されている場合は、ゲームの更新をスキップ
+        const titleScreen = document.getElementById('title-screen');
+        if (titleScreen && !titleScreen.classList.contains('hidden')) {
+            this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
+            return;
+        }
         try {
             // 初回実行時の初期化
             if (this.lastTime === 0) {

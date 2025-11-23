@@ -349,6 +349,7 @@ export class Game {
      * ゲーム更新（落下処理）
      */
     update(deltaTime: number): void {
+        // ゲームが開始されていない場合は更新しない
         if (this.state !== GameState.PLAYING) {
             return;
         }
